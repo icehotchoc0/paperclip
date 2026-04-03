@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from "react";
+import { useTranslation } from "react-i18next";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AGENT_ADAPTER_TYPES } from "@paperclipai/shared";
 import type {
@@ -170,6 +171,7 @@ const claudeThinkingEffortOptions = [
 /* ---- Form ---- */
 
 export function AgentConfigForm(props: AgentConfigFormProps) {
+  const { t } = useTranslation(["agents", "common"]);
   const { mode, adapterModels: externalModels } = props;
   const isCreate = mode === "create";
   const cards = props.sectionLayout === "cards";
@@ -468,13 +470,13 @@ export function AgentConfigForm(props: AgentConfigFormProps) {
       {isDirty && !props.hideInlineSave && (
         <div className="sticky top-0 z-10 flex items-center justify-end px-4 py-2 bg-background/90 backdrop-blur-sm border-b border-primary/20">
           <div className="flex items-center gap-3">
-            <span className="text-xs text-muted-foreground">Unsaved changes</span>
+            <span className="text-xs text-muted-foreground">{t("agents:unsavedChanges")}</span>
             <Button
               size="sm"
               onClick={handleSave}
               disabled={!isCreate && props.isSaving}
             >
-              {!isCreate && props.isSaving ? "Saving..." : "Save"}
+              {!isCreate && props.isSaving ? t("agents:saving") : t("common:save")}
             </Button>
           </div>
         </div>
@@ -484,8 +486,8 @@ export function AgentConfigForm(props: AgentConfigFormProps) {
       {!isCreate && (
         <div className={cn(!cards && "border-b border-border")}>
           {cards
-            ? <h3 className="text-sm font-medium mb-3">Identity</h3>
-            : <div className="px-4 py-2 text-xs font-medium text-muted-foreground">Identity</div>
+            ? <h3 className="text-sm font-medium mb-3">{t("agents:identity")}</h3>
+            : <div className="px-4 py-2 text-xs font-medium text-muted-foreground">{t("agents:identity")}</div>
           }
           <div className={cn(cards ? "border border-border rounded-lg p-4 space-y-3" : "px-4 pb-3 space-y-3")}>
             <Field label="Name" hint={help.name}>
@@ -562,8 +564,8 @@ export function AgentConfigForm(props: AgentConfigFormProps) {
       <div className={cn(!cards && (isCreate ? "border-t border-border" : "border-b border-border"))}>
         <div className={cn(cards ? "flex items-center justify-between mb-3" : "px-4 py-2 flex items-center justify-between gap-2")}>
           {cards
-            ? <h3 className="text-sm font-medium">Adapter</h3>
-            : <span className="text-xs font-medium text-muted-foreground">Adapter</span>
+            ? <h3 className="text-sm font-medium">{t("agents:adapter")}</h3>
+            : <span className="text-xs font-medium text-muted-foreground">{t("agents:adapter")}</span>
           }
           {showAdapterTestEnvironmentButton && (
             <Button
@@ -574,7 +576,7 @@ export function AgentConfigForm(props: AgentConfigFormProps) {
               onClick={() => testEnvironment.mutate()}
               disabled={testEnvironment.isPending || !selectedCompanyId}
             >
-              {testEnvironment.isPending ? "Testing..." : "Test environment"}
+              {testEnvironment.isPending ? t("agents:testing") : t("agents:testEnvironment")}
             </Button>
           )}
         </div>
@@ -637,7 +639,7 @@ export function AgentConfigForm(props: AgentConfigFormProps) {
             <div className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive">
               {testEnvironment.error instanceof Error
                 ? testEnvironment.error.message
-                : "Environment test failed"}
+                : t("agents:environmentTestFailed")}
             </div>
           )}
 
@@ -702,8 +704,8 @@ export function AgentConfigForm(props: AgentConfigFormProps) {
       {isLocal && (
         <div className={cn(!cards && "border-b border-border")}>
           {cards
-            ? <h3 className="text-sm font-medium mb-3">Permissions &amp; Configuration</h3>
-            : <div className="px-4 py-2 text-xs font-medium text-muted-foreground">Permissions &amp; Configuration</div>
+            ? <h3 className="text-sm font-medium mb-3">{t("agents:permissionsAndConfiguration")}</h3>
+            : <div className="px-4 py-2 text-xs font-medium text-muted-foreground">{t("agents:permissionsAndConfiguration")}</div>
           }
           <div className={cn(cards ? "border border-border rounded-lg p-4 space-y-3" : "px-4 pb-3 space-y-3")}>
               <Field label="Command" hint={help.localCommand}>
@@ -765,7 +767,7 @@ export function AgentConfigForm(props: AgentConfigFormProps) {
                 <p className="text-xs text-destructive">
                   {fetchedModelsError instanceof Error
                     ? fetchedModelsError.message
-                    : "Failed to load adapter models."}
+                    : t("agents:failedToLoadAdapterModels")}
                 </p>
               )}
 
@@ -897,8 +899,8 @@ export function AgentConfigForm(props: AgentConfigFormProps) {
       {isCreate && showCreateRunPolicySection ? (
         <div className={cn(!cards && "border-b border-border")}>
           {cards
-            ? <h3 className="text-sm font-medium flex items-center gap-2 mb-3"><Heart className="h-3 w-3" /> Run Policy</h3>
-            : <div className="px-4 py-2 text-xs font-medium text-muted-foreground flex items-center gap-2"><Heart className="h-3 w-3" /> Run Policy</div>
+            ? <h3 className="text-sm font-medium flex items-center gap-2 mb-3"><Heart className="h-3 w-3" /> {t("agents:runPolicy")}</h3>
+            : <div className="px-4 py-2 text-xs font-medium text-muted-foreground flex items-center gap-2"><Heart className="h-3 w-3" /> {t("agents:runPolicy")}</div>
           }
           <div className={cn(cards ? "border border-border rounded-lg p-4 space-y-3" : "px-4 pb-3 space-y-3")}>
             <ToggleWithNumber
@@ -918,8 +920,8 @@ export function AgentConfigForm(props: AgentConfigFormProps) {
       ) : !isCreate ? (
         <div className={cn(!cards && "border-b border-border")}>
           {cards
-            ? <h3 className="text-sm font-medium flex items-center gap-2 mb-3"><Heart className="h-3 w-3" /> Run Policy</h3>
-            : <div className="px-4 py-2 text-xs font-medium text-muted-foreground flex items-center gap-2"><Heart className="h-3 w-3" /> Run Policy</div>
+            ? <h3 className="text-sm font-medium flex items-center gap-2 mb-3"><Heart className="h-3 w-3" /> {t("agents:runPolicy")}</h3>
+            : <div className="px-4 py-2 text-xs font-medium text-muted-foreground flex items-center gap-2"><Heart className="h-3 w-3" /> {t("agents:runPolicy")}</div>
           }
           <div className={cn(cards ? "border border-border rounded-lg overflow-hidden" : "")}>
             <div className={cn(cards ? "p-4 space-y-3" : "px-4 pb-3 space-y-3")}>
@@ -937,7 +939,7 @@ export function AgentConfigForm(props: AgentConfigFormProps) {
               />
             </div>
             <CollapsibleSection
-              title="Advanced Run Policy"
+              title={t("agents:advancedRunPolicy")}
               bordered={cards}
               open={runPolicyAdvancedOpen}
               onToggle={() => setRunPolicyAdvancedOpen(!runPolicyAdvancedOpen)}
@@ -988,8 +990,9 @@ export function AgentConfigForm(props: AgentConfigFormProps) {
 }
 
 function AdapterEnvironmentResult({ result }: { result: AdapterEnvironmentTestResult }) {
+  const { t } = useTranslation("agents");
   const statusLabel =
-    result.status === "pass" ? "Passed" : result.status === "warn" ? "Warnings" : "Failed";
+    result.status === "pass" ? t("passed") : result.status === "warn" ? t("warnings") : t("common:failed");
   const statusClass =
     result.status === "pass"
       ? "text-green-700 dark:text-green-300 border-green-300 dark:border-green-500/40 bg-green-50 dark:bg-green-500/10"
@@ -1014,7 +1017,7 @@ function AdapterEnvironmentResult({ result }: { result: AdapterEnvironmentTestRe
             <span className="mx-1 opacity-60">·</span>
             <span>{check.message}</span>
             {check.detail && <span className="block opacity-75 break-all">({check.detail})</span>}
-            {check.hint && <span className="block opacity-90 break-words">Hint: {check.hint}</span>}
+            {check.hint && <span className="block opacity-90 break-words">{t("hint")} {check.hint}</span>}
           </div>
         ))}
       </div>
@@ -1042,6 +1045,7 @@ function AdapterTypeDropdown({
   value: string;
   onChange: (type: string) => void;
 }) {
+  const { t } = useTranslation("agents");
   return (
     <Popover>
       <PopoverTrigger asChild>
@@ -1074,7 +1078,7 @@ function AdapterTypeDropdown({
               <span>{item.label}</span>
             </span>
             {item.comingSoon && (
-              <span className="text-[10px] text-muted-foreground">Coming soon</span>
+              <span className="text-[10px] text-muted-foreground">{t("comingSoon")}</span>
             )}
           </button>
         ))}
@@ -1152,6 +1156,7 @@ function EnvVarEditor({
     return [...entries, { key: "", source: "plain", plainValue: "", secretId: "" }];
   }
 
+  const { t } = useTranslation("agents");
   const [rows, setRows] = useState<Row[]>(() => toRows(value));
   const [sealError, setSealError] = useState<string | null>(null);
   const valueRef = useRef(value);
@@ -1278,8 +1283,8 @@ function EnvVarEditor({
                 })
               }
             >
-              <option value="plain">Plain</option>
-              <option value="secret">Secret</option>
+              <option value="plain">{t("plain")}</option>
+              <option value="secret">{t("secret")}</option>
             </select>
             {row.source === "secret" ? (
               <>
@@ -1288,7 +1293,7 @@ function EnvVarEditor({
                   value={row.secretId}
                   onChange={(e) => updateRow(i, { secretId: e.target.value })}
                 >
-                  <option value="">Select secret...</option>
+                  <option value="">{t("selectSecret")}</option>
                   {secrets.map((secret) => (
                     <option key={secret.id} value={secret.id}>
                       {secret.name}
@@ -1302,7 +1307,7 @@ function EnvVarEditor({
                   disabled={!row.key.trim() || !row.plainValue}
                   title="Create secret from current plain value"
                 >
-                  New
+                  {t("new")}
                 </button>
               </>
             ) : (
@@ -1320,7 +1325,7 @@ function EnvVarEditor({
                   disabled={!row.key.trim() || !row.plainValue}
                   title="Store value as secret and replace with reference"
                 >
-                  Seal
+                  {t("seal")}
                 </button>
               </>
             )}
@@ -1340,7 +1345,7 @@ function EnvVarEditor({
       })}
       {sealError && <p className="text-[11px] text-destructive">{sealError}</p>}
       <p className="text-[11px] text-muted-foreground/60">
-        PAPERCLIP_* variables are injected automatically at runtime.
+        {t("agents:envAutoInjected")}
       </p>
     </div>
   );
@@ -1373,6 +1378,7 @@ function ModelDropdown({
   onDetectModel?: () => Promise<string | null>;
   detectModelLabel?: string;
 }) {
+  const { t } = useTranslation("agents");
   const [modelSearch, setModelSearch] = useState("");
   const [detectingModel, setDetectingModel] = useState(false);
   const selected = models.find((m) => m.id === value);
@@ -1447,7 +1453,7 @@ function ModelDropdown({
             <span className={cn(!value && "text-muted-foreground")}>
               {selected
                 ? selected.label
-                : value || (allowDefault ? "Default" : required ? "Select model (required)" : "Select model")}
+                : value || (allowDefault ? t("default") : required ? t("selectModelRequired") : t("selectModel"))}
             </span>
             <ChevronDown className="h-3 w-3 text-muted-foreground" />
           </button>
@@ -1456,7 +1462,7 @@ function ModelDropdown({
           <div className="relative mb-1">
             <input
               className="w-full px-2 py-1.5 pr-6 text-xs bg-transparent outline-none border-b border-border placeholder:text-muted-foreground/50"
-              placeholder={creatable ? "Search models... (type to create)" : "Search models..."}
+              placeholder={creatable ? t("searchModelsCreatable") : t("searchModels")}
               value={modelSearch}
               onChange={(e) => setModelSearch(e.target.value)}
               autoFocus
@@ -1487,7 +1493,7 @@ function ModelDropdown({
                 <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
                 <path d="M3 3v5h5" />
               </svg>
-              {detectingModel ? "Detecting..." : (detectModelLabel ?? "Detect from config")}
+              {detectingModel ? t("detecting") : (detectModelLabel ?? t("detectFromConfig"))}
             </button>
           )}
           {value && !models.some((m) => m.id === value) && (
@@ -1540,7 +1546,7 @@ function ModelDropdown({
                   onOpenChange(false);
                 }}
               >
-                Default
+                {t("default")}
               </button>
             )}
             {canCreateManualModel && (
@@ -1553,7 +1559,7 @@ function ModelDropdown({
                   setModelSearch("");
                 }}
               >
-                <span>Use manual model</span>
+                <span>{t("useManualModel")}</span>
                 <span className="text-xs font-mono text-muted-foreground">{manualModel}</span>
               </button>
             )}
@@ -1588,8 +1594,8 @@ function ModelDropdown({
               <div className="px-2 py-2 space-y-2">
                 <p className="text-xs text-muted-foreground">
                   {onDetectModel
-                    ? "No Hermes model detected yet. Configure Hermes or enter a provider/model manually."
-                    : "No models found."}
+                    ? t("noHermesModel")
+                    : t("noModelsFound")}
                 </p>
               </div>
             )}

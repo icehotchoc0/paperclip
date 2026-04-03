@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState, useRef } from "react";
+import { useTranslation } from "react-i18next";
 import { useParams, useNavigate, Link, Navigate, useBeforeUnload } from "@/lib/router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
@@ -161,11 +162,11 @@ function formatEnvForDisplay(envValue: unknown, censorUsernameInLogs: boolean): 
     .join("\n");
 }
 
-const sourceLabels: Record<string, string> = {
-  timer: "Timer",
-  assignment: "Assignment",
-  on_demand: "On-demand",
-  automation: "Automation",
+const sourceLabelsKeys: Record<string, string> = {
+  timer: "sourceTimer",
+  assignment: "sourceAssignment",
+  on_demand: "sourceOnDemand",
+  automation: "sourceAutomation",
 };
 
 const LIVE_SCROLL_BOTTOM_TOLERANCE_PX = 32;
@@ -305,20 +306,12 @@ function parseStoredLogContent(content: string): RunLogChunk[] {
   return parsed;
 }
 
-function workspaceOperationPhaseLabel(phase: WorkspaceOperation["phase"]) {
-  switch (phase) {
-    case "worktree_prepare":
-      return "Worktree setup";
-    case "workspace_provision":
-      return "Provision";
-    case "workspace_teardown":
-      return "Teardown";
-    case "worktree_cleanup":
-      return "Worktree cleanup";
-    default:
-      return phase;
-  }
-}
+const workspacePhaseKeys: Record<string, string> = {
+  worktree_prepare: "worktreeSetup",
+  workspace_provision: "provision",
+  workspace_teardown: "teardown",
+  worktree_cleanup: "worktreeCleanup",
+};
 
 function workspaceOperationStatusTone(status: WorkspaceOperation["status"]) {
   switch (status) {
@@ -355,6 +348,7 @@ function WorkspaceOperationLogViewer({
   operation: WorkspaceOperation;
   censorUsernameInLogs: boolean;
 }) {
+  const { t } = useTranslation("agents");
   const [open, setOpen] = useState(false);
   const { data: logData, isLoading, error } = useQuery({
     queryKey: ["workspace-operation-log", operation.id],
@@ -375,18 +369,18 @@ function WorkspaceOperationLogViewer({
         className="text-[11px] text-muted-foreground underline underline-offset-2 hover:text-foreground"
         onClick={() => setOpen((value) => !value)}
       >
-        {open ? "Hide full log" : "Show full log"}
+        {open ? t("hideFullLog") : t("showFullLog")}
       </button>
       {open && (
         <div className="rounded-md border border-border bg-background/70 p-2">
-          {isLoading && <div className="text-xs text-muted-foreground">Loading log...</div>}
+          {isLoading && <div className="text-xs text-muted-foreground">{t("loadingLog")}</div>}
           {error && (
             <div className="text-xs text-destructive">
-              {error instanceof Error ? error.message : "Failed to load workspace operation log"}
+              {error instanceof Error ? error.message : t("failedToLoadWorkspaceLog")}
             </div>
           )}
           {!isLoading && !error && chunks.length === 0 && (
-            <div className="text-xs text-muted-foreground">No persisted log lines.</div>
+            <div className="text-xs text-muted-foreground">{t("noPersistedLogLines")}</div>
           )}
           {chunks.length > 0 && (
             <div className="max-h-64 overflow-y-auto rounded bg-neutral-100 p-2 font-mono text-xs dark:bg-neutral-950">
@@ -425,12 +419,13 @@ function WorkspaceOperationsSection({
   operations: WorkspaceOperation[];
   censorUsernameInLogs: boolean;
 }) {
+  const { t } = useTranslation("agents");
   if (operations.length === 0) return null;
 
   return (
     <div className="rounded-lg border border-border bg-background/60 p-3 space-y-3">
       <div className="text-xs font-medium text-muted-foreground">
-        Workspace ({operations.length})
+        {t("workspace")} ({operations.length})
       </div>
       <div className="space-y-3">
         {operations.map((operation) => {
@@ -438,7 +433,7 @@ function WorkspaceOperationsSection({
           return (
             <div key={operation.id} className="rounded-md border border-border/70 bg-background/70 p-3 space-y-2">
               <div className="flex flex-wrap items-center gap-2">
-                <div className="text-sm font-medium">{workspaceOperationPhaseLabel(operation.phase)}</div>
+                <div className="text-sm font-medium">{workspacePhaseKeys[operation.phase] ? t(workspacePhaseKeys[operation.phase]) : operation.phase}</div>
                 <WorkspaceOperationStatusBadge status={operation.status} />
                 <div className="text-[11px] text-muted-foreground">
                   {relativeTime(operation.startedAt)}
@@ -447,13 +442,13 @@ function WorkspaceOperationsSection({
               </div>
               {operation.command && (
                 <div className="text-xs break-all">
-                  <span className="text-muted-foreground">Command: </span>
+                  <span className="text-muted-foreground">{t("command")} </span>
                   <span className="font-mono">{operation.command}</span>
                 </div>
               )}
               {operation.cwd && (
                 <div className="text-xs break-all">
-                  <span className="text-muted-foreground">Working dir: </span>
+                  <span className="text-muted-foreground">{t("workingDir")} </span>
                   <span className="font-mono">{operation.cwd}</span>
                 </div>
               )}
@@ -482,7 +477,7 @@ function WorkspaceOperationsSection({
               )}
               {typeof metadata?.created === "boolean" && (
                 <div className="text-xs text-muted-foreground">
-                  {metadata.created ? "Created by this run" : "Reused existing workspace"}
+                  {metadata.created ? t("createdByThisRun") : t("reusedExistingWorkspace")}
                 </div>
               )}
               {operation.stderrExcerpt && operation.stderrExcerpt.trim() && (
@@ -516,6 +511,7 @@ function WorkspaceOperationsSection({
 }
 
 export function AgentDetail() {
+  const { t } = useTranslation(["agents", "common"]);
   const { companyPrefix, agentId, tab: urlTab, runId: urlRunId } = useParams<{
     companyPrefix?: string;
     agentId: string;
@@ -690,7 +686,7 @@ export function AgentDetail() {
       }
     },
     onError: (err) => {
-      setActionError(err instanceof Error ? err.message : "Action failed");
+      setActionError(err instanceof Error ? err.message : t("agents:actionFailed"));
     },
   });
 
@@ -732,7 +728,7 @@ export function AgentDetail() {
       queryClient.invalidateQueries({ queryKey: queryKeys.agents.taskSessions(agentLookupRef) });
     },
     onError: (err) => {
-      setActionError(err instanceof Error ? err.message : "Failed to reset session");
+      setActionError(err instanceof Error ? err.message : t("agents:failedToResetSession"));
     },
   });
 
@@ -748,34 +744,34 @@ export function AgentDetail() {
       }
     },
     onError: (err) => {
-      setActionError(err instanceof Error ? err.message : "Failed to update permissions");
+      setActionError(err instanceof Error ? err.message : t("agents:failedToUpdatePermissions"));
     },
   });
 
   useEffect(() => {
     const crumbs: { label: string; href?: string }[] = [
-      { label: "Agents", href: "/agents" },
+      { label: t("agents:title"), href: "/agents" },
     ];
-    const agentName = agent?.name ?? routeAgentRef ?? "Agent";
+    const agentName = agent?.name ?? routeAgentRef ?? t("agents:title");
     if (activeView === "dashboard" && !urlRunId) {
       crumbs.push({ label: agentName });
     } else {
       crumbs.push({ label: agentName, href: `/agents/${canonicalAgentRef}/dashboard` });
       if (urlRunId) {
-        crumbs.push({ label: "Runs", href: `/agents/${canonicalAgentRef}/runs` });
+        crumbs.push({ label: t("agents:runs"), href: `/agents/${canonicalAgentRef}/runs` });
         crumbs.push({ label: `Run ${urlRunId.slice(0, 8)}` });
       } else if (activeView === "instructions") {
-        crumbs.push({ label: "Instructions" });
+        crumbs.push({ label: t("agents:instructions") });
       } else if (activeView === "configuration") {
-        crumbs.push({ label: "Configuration" });
+        crumbs.push({ label: t("agents:configuration") });
       // } else if (activeView === "skills") { // TODO: bring back later
-      //   crumbs.push({ label: "Skills" });
+      //   crumbs.push({ label: t("agents:skills") });
       } else if (activeView === "runs") {
-        crumbs.push({ label: "Runs" });
+        crumbs.push({ label: t("agents:runs") });
       } else if (activeView === "budget") {
-        crumbs.push({ label: "Budget" });
+        crumbs.push({ label: t("agents:budget") });
       } else {
-        crumbs.push({ label: "Dashboard" });
+        crumbs.push({ label: t("agents:dashboard") });
       }
     }
     setBreadcrumbs(crumbs);
@@ -831,12 +827,12 @@ export function AgentDetail() {
             onClick={() => openNewIssue({ assigneeAgentId: agent.id })}
           >
             <Plus className="h-3.5 w-3.5 sm:mr-1" />
-            <span className="hidden sm:inline">Assign Task</span>
+            <span className="hidden sm:inline">{t("agents:assignTask")}</span>
           </Button>
           <RunButton
             onClick={() => agentAction.mutate("invoke")}
             disabled={agentAction.isPending || isPendingApproval}
-            label="Run Heartbeat"
+            label={t("agents:runHeartbeat")}
           />
           <PauseResumeButton
             isPaused={agent.status === "paused"}
@@ -854,7 +850,7 @@ export function AgentDetail() {
                 <span className="animate-pulse absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75" />
                 <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-500" />
               </span>
-              <span className="text-[11px] font-medium text-blue-600 dark:text-blue-400">Live</span>
+              <span className="text-[11px] font-medium text-blue-600 dark:text-blue-400">{t("agents:liveIndicator")}</span>
             </Link>
           )}
 
@@ -874,7 +870,7 @@ export function AgentDetail() {
                 }}
               >
                 <Copy className="h-3 w-3" />
-                Copy Agent ID
+                {t("agents:copyAgentId")}
               </button>
               <button
                 className="flex items-center gap-2 w-full px-2 py-1.5 text-xs rounded hover:bg-accent/50"
@@ -884,7 +880,7 @@ export function AgentDetail() {
                 }}
               >
                 <RotateCcw className="h-3 w-3" />
-                Reset Sessions
+                {t("agents:resetSessions")}
               </button>
               <button
                 className="flex items-center gap-2 w-full px-2 py-1.5 text-xs rounded hover:bg-accent/50 text-destructive"
@@ -894,7 +890,7 @@ export function AgentDetail() {
                 }}
               >
                 <Trash2 className="h-3 w-3" />
-                Terminate
+                {t("agents:terminate")}
               </button>
             </PopoverContent>
           </Popover>
@@ -908,12 +904,12 @@ export function AgentDetail() {
         >
           <PageTabBar
             items={[
-              { value: "dashboard", label: "Dashboard" },
-              { value: "instructions", label: "Instructions" },
-              { value: "skills", label: "Skills" },
-              { value: "configuration", label: "Configuration" },
-              { value: "runs", label: "Runs" },
-              { value: "budget", label: "Budget" },
+              { value: "dashboard", label: t("agents:dashboard") },
+              { value: "instructions", label: t("agents:instructions") },
+              { value: "skills", label: t("agents:skills") },
+              { value: "configuration", label: t("agents:configuration") },
+              { value: "runs", label: t("agents:runs") },
+              { value: "budget", label: t("agents:budget") },
             ]}
             value={activeView}
             onValueChange={(value) => navigate(`/agents/${canonicalAgentRef}/${value}`)}
@@ -924,7 +920,7 @@ export function AgentDetail() {
       {actionError && <p className="text-sm text-destructive">{actionError}</p>}
       {isPendingApproval && (
         <p className="text-sm text-amber-500">
-          This agent is pending board approval and cannot be invoked yet.
+          {t("agents:pendingApproval")}
         </p>
       )}
 
@@ -945,14 +941,14 @@ export function AgentDetail() {
               onClick={() => cancelConfigActionRef.current?.()}
               disabled={configSaving}
             >
-              Cancel
+              {t("common:cancel")}
             </Button>
             <Button
               size="sm"
               onClick={() => saveConfigActionRef.current?.()}
               disabled={configSaving}
             >
-              {configSaving ? "Saving…" : "Save"}
+              {configSaving ? t("agents:saving") : t("common:save")}
             </Button>
           </div>
         </div>
@@ -971,14 +967,14 @@ export function AgentDetail() {
               onClick={() => cancelConfigActionRef.current?.()}
               disabled={configSaving}
             >
-              Cancel
+              {t("common:cancel")}
             </Button>
             <Button
               size="sm"
               onClick={() => saveConfigActionRef.current?.()}
               disabled={configSaving}
             >
-              {configSaving ? "Saving…" : "Save"}
+              {configSaving ? t("agents:saving") : t("common:save")}
             </Button>
           </div>
         </div>
@@ -1064,6 +1060,7 @@ function SummaryRow({ label, children }: { label: string; children: React.ReactN
 }
 
 function LatestRunCard({ runs, agentId }: { runs: HeartbeatRun[]; agentId: string }) {
+  const { t } = useTranslation("agents");
   if (runs.length === 0) return null;
 
   const sorted = [...runs].sort(
@@ -1107,13 +1104,13 @@ function LatestRunCard({ runs, agentId }: { runs: HeartbeatRun[]; agentId: strin
               <span className="relative inline-flex rounded-full h-2 w-2 bg-cyan-400" />
             </span>
           )}
-          {isLive ? "Live Run" : "Latest Run"}
+          {isLive ? t("liveRun") : t("latestRun")}
         </h3>
         <Link
           to={`/agents/${agentId}/runs/${run.id}`}
           className="shrink-0 text-xs text-muted-foreground hover:text-foreground transition-colors no-underline"
         >
-          View details &rarr;
+          {t("viewDetails")} &rarr;
         </Link>
       </div>
 
@@ -1135,7 +1132,7 @@ function LatestRunCard({ runs, agentId }: { runs: HeartbeatRun[]; agentId: strin
               : run.invocationSource === "on_demand" ? "bg-cyan-100 text-cyan-700 dark:bg-cyan-900/50 dark:text-cyan-300"
               : "bg-muted text-muted-foreground"
           )}>
-            {sourceLabels[run.invocationSource] ?? run.invocationSource}
+            {sourceLabelsKeys[run.invocationSource] ? t(sourceLabelsKeys[run.invocationSource]) : run.invocationSource}
           </span>
           <span className="ml-auto text-xs text-muted-foreground">{relativeTime(run.createdAt)}</span>
         </div>
@@ -1167,6 +1164,7 @@ function AgentOverview({
   agentId: string;
   agentRouteId: string;
 }) {
+  const { t } = useTranslation("agents");
   return (
     <div className="space-y-8">
       {/* Latest Run */}
@@ -1174,16 +1172,16 @@ function AgentOverview({
 
       {/* Charts */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <ChartCard title="Run Activity" subtitle="Last 14 days">
+        <ChartCard title={t("runActivity")} subtitle={t("last14Days")}>
           <RunActivityChart runs={runs} />
         </ChartCard>
-        <ChartCard title="Issues by Priority" subtitle="Last 14 days">
+        <ChartCard title={t("issuesByPriority")} subtitle={t("last14Days")}>
           <PriorityChart issues={assignedIssues} />
         </ChartCard>
-        <ChartCard title="Issues by Status" subtitle="Last 14 days">
+        <ChartCard title={t("issuesByStatus")} subtitle={t("last14Days")}>
           <IssueStatusChart issues={assignedIssues} />
         </ChartCard>
-        <ChartCard title="Success Rate" subtitle="Last 14 days">
+        <ChartCard title={t("successRate")} subtitle={t("last14Days")}>
           <SuccessRateChart runs={runs} />
         </ChartCard>
       </div>
@@ -1191,16 +1189,16 @@ function AgentOverview({
       {/* Recent Issues */}
       <div className="space-y-3">
         <div className="flex items-center justify-between">
-          <h3 className="text-sm font-medium">Recent Issues</h3>
+          <h3 className="text-sm font-medium">{t("recentIssues")}</h3>
           <Link
             to={`/issues?participantAgentId=${agentId}`}
             className="text-xs text-muted-foreground hover:text-foreground transition-colors"
           >
-            See All &rarr;
+            {t("seeAll")} &rarr;
           </Link>
         </div>
         {assignedIssues.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No recent issues.</p>
+          <p className="text-sm text-muted-foreground">{t("noRecentIssues")}</p>
         ) : (
           <div className="border border-border rounded-lg">
             {assignedIssues.slice(0, 10).map((issue) => (
@@ -1214,7 +1212,7 @@ function AgentOverview({
             ))}
             {assignedIssues.length > 10 && (
               <div className="px-3 py-2 text-xs text-muted-foreground text-center border-t border-border">
-                +{assignedIssues.length - 10} more issues
+                {t("moreIssues", { count: assignedIssues.length - 10 })}
               </div>
             )}
           </div>
@@ -1223,7 +1221,7 @@ function AgentOverview({
 
       {/* Costs */}
       <div className="space-y-3">
-        <h3 className="text-sm font-medium">Costs</h3>
+        <h3 className="text-sm font-medium">{t("costs")}</h3>
         <CostsSection runtimeState={runtimeState} runs={runs} />
       </div>
     </div>
@@ -1239,6 +1237,7 @@ function CostsSection({
   runtimeState?: AgentRuntimeState;
   runs: HeartbeatRun[];
 }) {
+  const { t } = useTranslation("agents");
   const runsWithCost = runs
     .filter((r) => {
       const metrics = runMetrics(r);
@@ -1252,19 +1251,19 @@ function CostsSection({
         <div className="border border-border rounded-lg p-4">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 tabular-nums">
             <div>
-              <span className="text-xs text-muted-foreground block">Input tokens</span>
+              <span className="text-xs text-muted-foreground block">{t("inputTokens")}</span>
               <span className="text-lg font-semibold">{formatTokens(runtimeState.totalInputTokens)}</span>
             </div>
             <div>
-              <span className="text-xs text-muted-foreground block">Output tokens</span>
+              <span className="text-xs text-muted-foreground block">{t("outputTokens")}</span>
               <span className="text-lg font-semibold">{formatTokens(runtimeState.totalOutputTokens)}</span>
             </div>
             <div>
-              <span className="text-xs text-muted-foreground block">Cached tokens</span>
+              <span className="text-xs text-muted-foreground block">{t("cachedTokens")}</span>
               <span className="text-lg font-semibold">{formatTokens(runtimeState.totalCachedInputTokens)}</span>
             </div>
             <div>
-              <span className="text-xs text-muted-foreground block">Total cost</span>
+              <span className="text-xs text-muted-foreground block">{t("totalCost")}</span>
               <span className="text-lg font-semibold">{formatCents(runtimeState.totalCostCents)}</span>
             </div>
           </div>
@@ -1275,11 +1274,11 @@ function CostsSection({
           <table className="w-full text-xs">
             <thead>
               <tr className="border-b border-border bg-accent/20">
-                <th className="text-left px-3 py-2 font-medium text-muted-foreground">Date</th>
-                <th className="text-left px-3 py-2 font-medium text-muted-foreground">Run</th>
-                <th className="text-right px-3 py-2 font-medium text-muted-foreground">Input</th>
-                <th className="text-right px-3 py-2 font-medium text-muted-foreground">Output</th>
-                <th className="text-right px-3 py-2 font-medium text-muted-foreground">Cost</th>
+                <th className="text-left px-3 py-2 font-medium text-muted-foreground">{t("dateColumn")}</th>
+                <th className="text-left px-3 py-2 font-medium text-muted-foreground">{t("runColumn")}</th>
+                <th className="text-right px-3 py-2 font-medium text-muted-foreground">{t("inputColumn")}</th>
+                <th className="text-right px-3 py-2 font-medium text-muted-foreground">{t("outputColumn")}</th>
+                <th className="text-right px-3 py-2 font-medium text-muted-foreground">{t("costColumn")}</th>
               </tr>
             </thead>
             <tbody>
@@ -1346,6 +1345,7 @@ function AgentConfigurePage({
     },
   });
 
+  const { t } = useTranslation("agents");
   return (
     <div className="max-w-3xl space-y-6">
       <ConfigurationTab
@@ -1360,7 +1360,7 @@ function AgentConfigurePage({
         hideInstructionsFile
       />
       <div>
-        <h3 className="text-sm font-medium mb-3">API Keys</h3>
+        <h3 className="text-sm font-medium mb-3">{t("apiKeys")}</h3>
         <KeysTab agentId={agentId} companyId={companyId} />
       </div>
 
@@ -1374,13 +1374,13 @@ function AgentConfigurePage({
             ? <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
             : <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
           }
-          Configuration Revisions
+          {t("configurationRevisions")}
           <span className="text-xs font-normal text-muted-foreground">{configRevisions?.length ?? 0}</span>
         </button>
         {revisionsOpen && (
           <div className="mt-3">
             {(configRevisions ?? []).length === 0 ? (
-              <p className="text-sm text-muted-foreground">No configuration revisions yet.</p>
+              <p className="text-sm text-muted-foreground">{t("noConfigRevisions")}</p>
             ) : (
               <div className="space-y-2">
                 {(configRevisions ?? []).slice(0, 10).map((revision) => (
@@ -1400,7 +1400,7 @@ function AgentConfigurePage({
                         onClick={() => rollbackConfig.mutate(revision.id)}
                         disabled={rollbackConfig.isPending}
                       >
-                        Restore
+                        {t("restore")}
                       </Button>
                     </div>
                     <p className="text-xs text-muted-foreground">
@@ -1473,8 +1473,8 @@ function ConfigurationTab({
           ? err.message
           : err instanceof Error
             ? err.message
-            : "Could not save agent";
-      pushToast({ title: "Save failed", body: message, tone: "error" });
+            : t("couldNotSaveAgent");
+      pushToast({ title: t("saveFailed"), body: message, tone: "error" });
     },
   });
 
@@ -1490,18 +1490,19 @@ function ConfigurationTab({
     onSavingChange(isConfigSaving);
   }, [onSavingChange, isConfigSaving]);
 
+  const { t } = useTranslation("agents");
   const canCreateAgents = Boolean(agent.permissions?.canCreateAgents);
   const canAssignTasks = Boolean(agent.access?.canAssignTasks);
   const taskAssignSource = agent.access?.taskAssignSource ?? "none";
   const taskAssignLocked = agent.role === "ceo" || canCreateAgents;
   const taskAssignHint =
     taskAssignSource === "ceo_role"
-      ? "Enabled automatically for CEO agents."
+      ? t("taskAssignCeoRole")
       : taskAssignSource === "agent_creator"
-        ? "Enabled automatically while this agent can create new agents."
+        ? t("taskAssignAgentCreator")
         : taskAssignSource === "explicit_grant"
-          ? "Enabled via explicit company permission grant."
-          : "Disabled unless explicitly granted.";
+          ? t("taskAssignExplicitGrant")
+          : t("taskAssignDisabled");
 
   return (
     <div className="space-y-6">
@@ -1521,13 +1522,13 @@ function ConfigurationTab({
       />
 
       <div>
-        <h3 className="text-sm font-medium mb-3">Permissions</h3>
+        <h3 className="text-sm font-medium mb-3">{t("permissions")}</h3>
         <div className="border border-border rounded-lg p-4 space-y-4">
           <div className="flex items-center justify-between gap-4 text-sm">
             <div className="space-y-1">
-              <div>Can create new agents</div>
+              <div>{t("canCreateAgents")}</div>
               <p className="text-xs text-muted-foreground">
-                Lets this agent create or hire agents and implicitly assign tasks.
+                {t("canCreateAgentsDesc")}
               </p>
             </div>
             <button
@@ -1557,7 +1558,7 @@ function ConfigurationTab({
           </div>
           <div className="flex items-center justify-between gap-4 text-sm">
             <div className="space-y-1">
-              <div>Can assign tasks</div>
+              <div>{t("canAssignTasks")}</div>
               <p className="text-xs text-muted-foreground">
                 {taskAssignHint}
               </p>
@@ -2758,6 +2759,7 @@ function AgentSkillsTab({
 /* ---- Runs Tab ---- */
 
 function RunListItem({ run, isSelected, agentId }: { run: HeartbeatRun; isSelected: boolean; agentId: string }) {
+  const { t } = useTranslation("agents");
   const statusInfo = runStatusIcons[run.status] ?? { icon: Clock, color: "text-neutral-400" };
   const StatusIcon = statusInfo.icon;
   const metrics = runMetrics(run);
@@ -2785,7 +2787,7 @@ function RunListItem({ run, isSelected, agentId }: { run: HeartbeatRun; isSelect
             : run.invocationSource === "on_demand" ? "bg-cyan-100 text-cyan-700 dark:bg-cyan-900/50 dark:text-cyan-300"
             : "bg-muted text-muted-foreground"
         )}>
-          {sourceLabels[run.invocationSource] ?? run.invocationSource}
+          {sourceLabelsKeys[run.invocationSource] ? t(sourceLabelsKeys[run.invocationSource]) : run.invocationSource}
         </span>
         <span className="ml-auto text-[11px] text-muted-foreground shrink-0">
           {relativeTime(run.createdAt)}
@@ -2821,10 +2823,11 @@ function RunsTab({
   selectedRunId: string | null;
   adapterType: string;
 }) {
+  const { t } = useTranslation("agents");
   const { isMobile } = useSidebar();
 
   if (runs.length === 0) {
-    return <p className="text-sm text-muted-foreground">No runs yet.</p>;
+    return <p className="text-sm text-muted-foreground">{t("noRunsYet")}</p>;
   }
 
   // Sort by created descending
@@ -2846,7 +2849,7 @@ function RunsTab({
             className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors no-underline"
           >
             <ArrowLeft className="h-3.5 w-3.5" />
-            Back to runs
+            {t("backToRuns")}
           </Link>
           <RunDetail key={selectedRun.id} run={selectedRun} agentRouteId={agentRouteId} adapterType={adapterType} />
         </div>
@@ -2889,6 +2892,7 @@ function RunsTab({
 /* ---- Run Detail (expanded) ---- */
 
 function RunDetail({ run: initialRun, agentRouteId, adapterType }: { run: HeartbeatRun; agentRouteId: string; adapterType: string }) {
+  const { t } = useTranslation("agents");
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const { data: hydratedRun } = useQuery({
@@ -3054,7 +3058,7 @@ function RunDetail({ run: initialRun, agentRouteId, adapterType }: { run: Heartb
                   onClick={() => cancelRun.mutate()}
                   disabled={cancelRun.isPending}
                 >
-                  {cancelRun.isPending ? "Cancelling…" : "Cancel"}
+                  {cancelRun.isPending ? t("cancelling") : t("common:cancel")}
                 </Button>
               )}
               {canResumeLostRun && (
@@ -3066,7 +3070,7 @@ function RunDetail({ run: initialRun, agentRouteId, adapterType }: { run: Heartb
                   disabled={resumeRun.isPending}
                 >
                   <RotateCcw className="h-3.5 w-3.5 mr-1" />
-                  {resumeRun.isPending ? "Resuming…" : "Resume"}
+                  {resumeRun.isPending ? t("resuming") : t("resume")}
                 </Button>
               )}
               {canRetryRun && !canResumeLostRun && (
@@ -3078,18 +3082,18 @@ function RunDetail({ run: initialRun, agentRouteId, adapterType }: { run: Heartb
                   disabled={retryRun.isPending}
                 >
                   <RotateCcw className="h-3.5 w-3.5 mr-1" />
-                  {retryRun.isPending ? "Retrying…" : "Retry"}
+                  {retryRun.isPending ? t("retrying") : t("common:retry")}
                 </Button>
               )}
             </div>
             {resumeRun.isError && (
               <div className="text-xs text-destructive">
-                {resumeRun.error instanceof Error ? resumeRun.error.message : "Failed to resume run"}
+                {resumeRun.error instanceof Error ? resumeRun.error.message : t("failedToResumeRun")}
               </div>
             )}
             {retryRun.isError && (
               <div className="text-xs text-destructive">
-                {retryRun.error instanceof Error ? retryRun.error.message : "Failed to retry run"}
+                {retryRun.error instanceof Error ? retryRun.error.message : t("failedToRetryRun")}
               </div>
             )}
             {startTime && (
@@ -3105,7 +3109,7 @@ function RunDetail({ run: initialRun, agentRouteId, adapterType }: { run: Heartb
                 </div>
                 {displayDurationSec !== null && (
                   <div className="text-xs text-muted-foreground">
-                    Duration: {displayDurationSec >= 60 ? `${Math.floor(displayDurationSec / 60)}m ${displayDurationSec % 60}s` : `${displayDurationSec}s`}
+                    {t("duration")} {displayDurationSec >= 60 ? `${Math.floor(displayDurationSec / 60)}m ${displayDurationSec % 60}s` : `${displayDurationSec}s`}
                   </div>
                 )}
               </div>
@@ -3125,18 +3129,18 @@ function RunDetail({ run: initialRun, agentRouteId, adapterType }: { run: Heartb
                   onClick={() => runClaudeLogin.mutate()}
                   disabled={runClaudeLogin.isPending}
                 >
-                  {runClaudeLogin.isPending ? "Running claude login..." : "Login to Claude Code"}
+                  {runClaudeLogin.isPending ? t("runningClaudeLogin") : t("loginToClaude")}
                 </Button>
                 {runClaudeLogin.isError && (
                   <p className="text-xs text-destructive">
                     {runClaudeLogin.error instanceof Error
                       ? runClaudeLogin.error.message
-                      : "Failed to run Claude login"}
+                      : t("failedToRunClaudeLogin")}
                   </p>
                 )}
                 {claudeLoginResult?.loginUrl && (
                   <p className="text-xs">
-                    Login URL:
+                    {t("loginUrl")}
                     <a
                       href={claudeLoginResult.loginUrl}
                       className="text-blue-600 underline underline-offset-2 ml-1 break-all dark:text-blue-400"
@@ -3175,19 +3179,19 @@ function RunDetail({ run: initialRun, agentRouteId, adapterType }: { run: Heartb
           {hasMetrics && (
             <div className="border-t sm:border-t-0 sm:border-l border-border p-4 grid grid-cols-2 gap-x-4 sm:gap-x-8 gap-y-3 content-center tabular-nums">
               <div>
-                <div className="text-xs text-muted-foreground">Input</div>
+                <div className="text-xs text-muted-foreground">{t("inputColumn")}</div>
                 <div className="text-sm font-medium font-mono">{formatTokens(metrics.input)}</div>
               </div>
               <div>
-                <div className="text-xs text-muted-foreground">Output</div>
+                <div className="text-xs text-muted-foreground">{t("outputColumn")}</div>
                 <div className="text-sm font-medium font-mono">{formatTokens(metrics.output)}</div>
               </div>
               <div>
-                <div className="text-xs text-muted-foreground">Cached</div>
+                <div className="text-xs text-muted-foreground">{t("cachedTokens")}</div>
                 <div className="text-sm font-medium font-mono">{formatTokens(metrics.cached)}</div>
               </div>
               <div>
-                <div className="text-xs text-muted-foreground">Cost</div>
+                <div className="text-xs text-muted-foreground">{t("costColumn")}</div>
                 <div className="text-sm font-medium font-mono">{metrics.cost > 0 ? `$${metrics.cost.toFixed(4)}` : "-"}</div>
               </div>
             </div>
