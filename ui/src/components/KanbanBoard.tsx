@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Link } from "@/lib/router";
 import {
   DndContext,
@@ -32,7 +33,17 @@ const boardStatuses = [
   "cancelled",
 ];
 
-function statusLabel(status: string): string {
+const statusI18nKey: Record<string, string> = {
+  backlog: "backlog",
+  todo: "todo",
+  in_progress: "inProgress",
+  in_review: "inReview",
+  done: "done",
+  cancelled: "cancelled",
+  blocked: "blocked",
+};
+
+function statusLabelFallback(status: string): string {
   return status.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
@@ -61,7 +72,13 @@ function KanbanColumn({
   agents?: Agent[];
   liveIssueIds?: Set<string>;
 }) {
+  const { t } = useTranslation("common");
   const { setNodeRef, isOver } = useDroppable({ id: status });
+
+  const statusLabel = (s: string) => {
+    const key = statusI18nKey[s];
+    return key ? t(key) : statusLabelFallback(s);
+  };
 
   return (
     <div className="flex flex-col min-w-[260px] w-[260px] shrink-0">
