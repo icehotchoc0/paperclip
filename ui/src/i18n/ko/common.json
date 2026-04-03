@@ -47,6 +47,7 @@
   "inProgress": "진행 중",
   "inReview": "검토 중",
   "cancelled": "취소됨",
+  "blocked": "차단됨",
   "areYouSure": "정말 진행하시겠습니까?",
   "cannotBeUndone": "이 작업은 되돌릴 수 없습니다.",
   "failedToLoad": "불러오기 실패",

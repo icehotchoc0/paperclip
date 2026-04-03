@@ -48,6 +48,7 @@
   "inReview": "In Review",
   "done": "Done",
   "cancelled": "Cancelled",
+  "blocked": "Blocked",
   "areYouSure": "Are you sure?",
   "cannotBeUndone": "This action cannot be undone.",
   "failedToLoad": "Failed to load",
