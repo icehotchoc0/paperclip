@@ -1,1 +1,38 @@
-{}
+{
+  "breadcrumbGoals": "Goals",
+  "selectCompanyToViewGoals": "Select a company to view goals.",
+  "noGoalsYet": "No goals yet.",
+  "addGoal": "Add Goal",
+  "newGoal": "New Goal",
+  "goalFallback": "Goal",
+  "addDescription": "Add a description...",
+  "subGoalsTab": "Sub-Goals ({{count}})",
+  "projectsTab": "Projects ({{count}})",
+  "subGoal": "Sub Goal",
+  "noSubGoals": "No sub-goals.",
+  "noLinkedProjects": "No linked projects.",
+  "noGoals": "No goals.",
+
+  "levelCompany": "Company",
+  "levelTeam": "Team",
+  "levelAgent": "Agent",
+  "levelTask": "Task",
+
+  "newSubGoalHeader": "New sub-goal",
+  "newGoalHeader": "New goal",
+  "goalTitle": "Goal title",
+  "addDescriptionShort": "Add description...",
+  "parentGoal": "Parent goal",
+  "noParent": "No parent",
+  "creating": "Creating\u2026",
+  "createSubGoal": "Create sub-goal",
+  "createGoal": "Create goal",
+
+  "statusLabel": "Status",
+  "levelLabel": "Level",
+  "ownerLabel": "Owner",
+  "ownerNone": "None",
+  "parentGoalLabel": "Parent Goal",
+  "createdLabel": "Created",
+  "updatedLabel": "Updated"
+}
