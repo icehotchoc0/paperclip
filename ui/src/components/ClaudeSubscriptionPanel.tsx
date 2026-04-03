@@ -1,4 +1,5 @@
 import type { QuotaWindow } from "@paperclipai/shared";
+import { useTranslation } from "react-i18next";
 import { cn, quotaSourceDisplayName } from "@/lib/utils";
 
 interface ClaudeSubscriptionPanelProps {
@@ -21,8 +22,8 @@ function normalizeLabel(text: string): string {
   return text.toLowerCase().replace(/[^a-z0-9]+/g, "");
 }
 
-function detailText(window: QuotaWindow): string | null {
-  if (typeof window.detail === "string" && window.detail.trim().length > 0) return window.detail.trim();
+function detailText(window: QuotaWindow): { text: string; isReset: boolean } | null {
+  if (typeof window.detail === "string" && window.detail.trim().length > 0) return { text: window.detail.trim(), isReset: false };
   if (window.resetsAt) {
     const formatted = new Date(window.resetsAt).toLocaleString(undefined, {
       month: "short",
@@ -31,7 +32,7 @@ function detailText(window: QuotaWindow): string | null {
       minute: "2-digit",
       timeZoneName: "short",
     });
-    return `Resets ${formatted}`;
+    return { text: formatted, isReset: true };
   }
   return null;
 }
@@ -56,6 +57,7 @@ export function ClaudeSubscriptionPanel({
   source = null,
   error = null,
 }: ClaudeSubscriptionPanelProps) {
+  const { t } = useTranslation("costs");
   const ordered = orderedWindows(windows);
 
   return (
@@ -63,10 +65,10 @@ export function ClaudeSubscriptionPanel({
       <div className="flex items-start justify-between gap-3 border-b border-border pb-3">
         <div className="min-w-0">
           <div className="text-[11px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-            Anthropic subscription
+            {t("anthropicSubscription")}
           </div>
           <div className="mt-1 text-sm text-muted-foreground">
-            Live Claude quota windows.
+            {t("liveClaudeQuotaWindows")}
           </div>
         </div>
         {source ? (
@@ -99,7 +101,7 @@ export function ClaudeSubscriptionPanel({
                   ) : null}
                 </div>
                 {detail ? (
-                  <div className="mt-2 text-sm text-muted-foreground">{detail}</div>
+                  <div className="mt-2 text-sm text-muted-foreground">{detail.isReset ? t("resetsFormatted", { date: detail.text }) : detail.text}</div>
                 ) : null}
               </div>
             );
@@ -115,12 +117,12 @@ export function ClaudeSubscriptionPanel({
                 <div className="min-w-0">
                   <div className="text-sm font-medium text-foreground">{window.label}</div>
                   {detail ? (
-                    <div className="mt-1 text-xs text-muted-foreground">{detail}</div>
+                    <div className="mt-1 text-xs text-muted-foreground">{detail.isReset ? t("resetsFormatted", { date: detail.text }) : detail.text}</div>
                   ) : null}
                 </div>
                 {window.usedPercent != null ? (
                   <div className="shrink-0 text-sm font-semibold tabular-nums text-foreground">
-                    {window.usedPercent}% used
+                    {t("percentUsed", { percent: window.usedPercent })}
                   </div>
                 ) : null}
               </div>
