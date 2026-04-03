@@ -1,4 +1,5 @@
 import type { QuotaWindow } from "@paperclipai/shared";
+import { useTranslation } from "react-i18next";
 import { cn, quotaSourceDisplayName } from "@/lib/utils";
 
 interface CodexSubscriptionPanelProps {
@@ -27,8 +28,8 @@ function orderedWindows(windows: QuotaWindow[]): QuotaWindow[] {
   });
 }
 
-function detailText(window: QuotaWindow): string | null {
-  if (typeof window.detail === "string" && window.detail.trim().length > 0) return window.detail.trim();
+function detailText(window: QuotaWindow): { text: string; isReset: boolean } | null {
+  if (typeof window.detail === "string" && window.detail.trim().length > 0) return { text: window.detail.trim(), isReset: false };
   if (!window.resetsAt) return null;
   const formatted = new Date(window.resetsAt).toLocaleString(undefined, {
     month: "short",
@@ -37,7 +38,7 @@ function detailText(window: QuotaWindow): string | null {
     minute: "2-digit",
     timeZoneName: "short",
   });
-  return `Resets ${formatted}`;
+  return { text: formatted, isReset: true };
 }
 
 function fillClass(usedPercent: number | null): string {
@@ -61,15 +62,17 @@ export function CodexSubscriptionPanel({
   const accountWindows = ordered.filter((window) => !isModelSpecific(window.label));
   const modelWindows = ordered.filter((window) => isModelSpecific(window.label));
 
+  const { t } = useTranslation("costs");
+
   return (
     <div className="border border-border px-4 py-4">
       <div className="flex items-start justify-between gap-3 border-b border-border pb-3">
         <div className="min-w-0">
           <div className="text-[11px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-            Codex subscription
+            {t("codexSubscription")}
           </div>
           <div className="mt-1 text-sm text-muted-foreground">
-            Live Codex quota windows.
+            {t("liveCodexQuotaWindows")}
           </div>
         </div>
         {source ? (
@@ -88,7 +91,7 @@ export function CodexSubscriptionPanel({
       <div className="mt-4 space-y-5">
         <div className="space-y-3">
           <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-            Account windows
+            {t("accountWindows")}
           </div>
           <div className="space-y-3">
             {accountWindows.map((window) => (
@@ -100,7 +103,7 @@ export function CodexSubscriptionPanel({
         {modelWindows.length > 0 ? (
           <div className="space-y-3">
             <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-              Model windows
+              {t("modelWindows")}
             </div>
             <div className="space-y-3">
               {modelWindows.map((window) => (
@@ -115,7 +118,9 @@ export function CodexSubscriptionPanel({
 }
 
 function QuotaWindowRow({ window }: { window: QuotaWindow }) {
+  const { t } = useTranslation("costs");
   const detail = detailText(window);
+  const detailDisplay = detail ? (detail.isReset ? t("resetsFormatted", { date: detail.text }) : detail.text) : null;
   if (window.usedPercent == null) {
     return (
       <div className="border border-border px-3.5 py-3">
@@ -125,8 +130,8 @@ function QuotaWindowRow({ window }: { window: QuotaWindow }) {
             <div className="text-sm font-semibold tabular-nums text-foreground">{window.valueLabel}</div>
           ) : null}
         </div>
-        {detail ? (
-          <div className="mt-2 text-xs text-muted-foreground">{detail}</div>
+        {detailDisplay ? (
+          <div className="mt-2 text-xs text-muted-foreground">{detailDisplay}</div>
         ) : null}
       </div>
     );
@@ -137,12 +142,12 @@ function QuotaWindowRow({ window }: { window: QuotaWindow }) {
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="text-sm font-medium text-foreground">{window.label}</div>
-          {detail ? (
-            <div className="mt-1 text-xs text-muted-foreground">{detail}</div>
+          {detailDisplay ? (
+            <div className="mt-1 text-xs text-muted-foreground">{detailDisplay}</div>
           ) : null}
         </div>
         <div className="shrink-0 text-sm font-semibold tabular-nums text-foreground">
-          {window.usedPercent}% used
+          {t("percentUsed", { percent: window.usedPercent })}
         </div>
       </div>
 

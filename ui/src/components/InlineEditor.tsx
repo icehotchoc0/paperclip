@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from "react";
+import { useTranslation } from "react-i18next";
 import { cn } from "../lib/utils";
 import { MarkdownEditor, type MarkdownEditorRef, type MentionOption } from "./MarkdownEditor";
 import { useAutosaveIndicator } from "../hooks/useAutosaveIndicator";
@@ -24,11 +25,13 @@ export function InlineEditor({
   onSave,
   as: Tag = "span",
   className,
-  placeholder = "Click to edit...",
+  placeholder: placeholderProp,
   multiline = false,
   imageUploadHandler,
   mentions,
 }: InlineEditorProps) {
+  const { t } = useTranslation("common");
+  const placeholder = placeholderProp ?? t("clickToEdit");
   const [editing, setEditing] = useState(false);
   const [multilineFocused, setMultilineFocused] = useState(false);
   const [draft, setDraft] = useState(value);
@@ -192,12 +195,12 @@ export function InlineEditor({
             )}
           >
             {autosaveState === "saving"
-              ? "Autosaving..."
+              ? t("autosaving")
               : autosaveState === "saved"
-                ? "Saved"
+                ? t("saved")
                 : autosaveState === "error"
-                  ? "Could not save"
-                  : "Idle"}
+                  ? t("couldNotSave")
+                  : t("idle")}
           </span>
         </div>
       </div>

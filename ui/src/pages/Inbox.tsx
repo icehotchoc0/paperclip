@@ -1,4 +1,5 @@
 import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Link, useLocation, useNavigate } from "@/lib/router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { INBOX_MINE_ISSUE_STATUS_FILTER } from "@paperclipai/shared";
@@ -141,23 +142,23 @@ function readIssueIdFromRun(run: HeartbeatRun): string | null {
 
 type NonIssueUnreadState = "visible" | "fading" | "hidden" | null;
 const trailingIssueColumns: InboxIssueColumn[] = ["assignee", "project", "workspace", "labels", "updated"];
-const inboxIssueColumnLabels: Record<InboxIssueColumn, string> = {
-  status: "Status",
-  id: "ID",
-  assignee: "Assignee",
-  project: "Project",
-  workspace: "Workspace",
-  labels: "Tags",
-  updated: "Last updated",
+const inboxIssueColumnLabelKeys: Record<InboxIssueColumn, string> = {
+  status: "columnStatus",
+  id: "columnId",
+  assignee: "columnAssignee",
+  project: "columnProject",
+  workspace: "columnWorkspace",
+  labels: "columnLabels",
+  updated: "columnUpdated",
 };
-const inboxIssueColumnDescriptions: Record<InboxIssueColumn, string> = {
-  status: "Issue state chip on the left edge.",
-  id: "Ticket identifier like PAP-1009.",
-  assignee: "Assigned agent or board user.",
-  project: "Linked project pill with its color.",
-  workspace: "Execution or project workspace used for the issue.",
-  labels: "Issue labels and tags.",
-  updated: "Latest visible activity time.",
+const inboxIssueColumnDescriptionKeys: Record<InboxIssueColumn, string> = {
+  status: "columnDescStatus",
+  id: "columnDescId",
+  assignee: "columnDescAssignee",
+  project: "columnDescProject",
+  workspace: "columnDescWorkspace",
+  labels: "columnDescLabels",
+  updated: "columnDescUpdated",
 };
 
 export function InboxIssueMetaLeading({
@@ -171,6 +172,7 @@ export function InboxIssueMetaLeading({
   showStatus?: boolean;
   showIdentifier?: boolean;
 }) {
+  const { t } = useTranslation("inbox");
   return (
     <>
       {showStatus ? (
@@ -205,7 +207,7 @@ export function InboxIssueMetaLeading({
               "text-blue-600 dark:text-blue-400",
             )}
           >
-            Live
+            {t("live")}
           </span>
         </span>
       )}
@@ -213,8 +215,8 @@ export function InboxIssueMetaLeading({
   );
 }
 
-function issueActivityText(issue: Issue): string {
-  return `Updated ${timeAgo(issue.lastActivityAt ?? issue.lastExternalCommentAt ?? issue.updatedAt)}`;
+function issueActivityTime(issue: Issue): string {
+  return timeAgo(issue.lastActivityAt ?? issue.lastExternalCommentAt ?? issue.updatedAt);
 }
 
 function issueTrailingGridTemplate(columns: InboxIssueColumn[]): string {
@@ -246,6 +248,7 @@ export function InboxIssueTrailingColumns({
   assigneeName: string | null;
   currentUserId: string | null;
 }) {
+  const { t } = useTranslation("inbox");
   const activityText = timeAgo(issue.lastActivityAt ?? issue.lastExternalCommentAt ?? issue.updatedAt);
   const userLabel = formatAssigneeUserLabel(issue.assigneeUserId, currentUserId) ?? "User";
 
@@ -278,7 +281,7 @@ export function InboxIssueTrailingColumns({
 
           return (
             <span key={column} className="min-w-0 truncate text-xs text-muted-foreground">
-              Unassigned
+              {t("unassigned")}
             </span>
           );
         }
@@ -303,7 +306,7 @@ export function InboxIssueTrailingColumns({
 
           return (
             <span key={column} className="min-w-0 truncate text-xs text-muted-foreground">
-              No project
+              {t("noProject")}
             </span>
           );
         }
@@ -386,9 +389,10 @@ export function FailedRunInboxRow({
   selected?: boolean;
   className?: string;
 }) {
+  const { t } = useTranslation("inbox");
   const issueId = readIssueIdFromRun(run);
   const issue = issueId ? issueById.get(issueId) ?? null : null;
-  const displayError = runFailureMessage(run);
+  const displayError = firstNonEmptyLine(run.error) ?? firstNonEmptyLine(run.stderrExcerpt) ?? t("defaultRunError");
   const showUnreadSlot = unreadState !== null;
   const showUnreadDot = unreadState === "visible" || unreadState === "fading";
 
@@ -408,7 +412,7 @@ export function FailedRunInboxRow({
                   "inline-flex h-4 w-4 items-center justify-center rounded-full transition-colors",
                   "hover:bg-blue-500/20",
                 )}
-                aria-label="Mark as read"
+                aria-label={t("markAsRead")}
               >
                 <span className={cn(
                   "block h-2 w-2 rounded-full transition-opacity duration-300",
@@ -422,7 +426,7 @@ export function FailedRunInboxRow({
                 onClick={onArchive}
                 disabled={archiveDisabled}
                 className="inline-flex h-4 w-4 items-center justify-center rounded-md text-muted-foreground opacity-0 transition-opacity hover:text-foreground group-hover:opacity-100 disabled:pointer-events-none disabled:opacity-30"
-                aria-label="Dismiss from inbox"
+                aria-label={t("dismissFromInbox")}
               >
                 <X className="h-3.5 w-3.5" />
               </button>
@@ -453,7 +457,7 @@ export function FailedRunInboxRow({
                   {issue.title}
                 </>
               ) : (
-                <>Failed run{linkedAgentName ? ` — ${linkedAgentName}` : ""}</>
+                <>{t("failedRun")}{linkedAgentName ? ` — ${linkedAgentName}` : ""}</>
               )}
             </span>
             <span className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
@@ -474,14 +478,14 @@ export function FailedRunInboxRow({
             disabled={isRetrying}
           >
             <RotateCcw className="mr-1.5 h-3.5 w-3.5" />
-            {isRetrying ? "Retrying…" : "Retry"}
+            {isRetrying ? t("retrying") : t("retry")}
           </Button>
           {!showUnreadSlot && (
             <button
               type="button"
               onClick={onDismiss}
               className="rounded-md p-1 text-muted-foreground opacity-0 transition-opacity hover:bg-accent hover:text-foreground group-hover:opacity-100"
-              aria-label="Dismiss"
+              aria-label={t("dismiss")}
             >
               <X className="h-4 w-4" />
             </button>
@@ -498,14 +502,14 @@ export function FailedRunInboxRow({
           disabled={isRetrying}
         >
           <RotateCcw className="mr-1.5 h-3.5 w-3.5" />
-          {isRetrying ? "Retrying…" : "Retry"}
+          {isRetrying ? t("retrying") : t("retry")}
         </Button>
         {!showUnreadSlot && (
           <button
             type="button"
             onClick={onDismiss}
             className="rounded-md p-1 text-muted-foreground hover:bg-accent hover:text-foreground"
-            aria-label="Dismiss"
+            aria-label={t("dismiss")}
           >
             <X className="h-4 w-4" />
           </button>
@@ -540,6 +544,7 @@ function ApprovalInboxRow({
   selected?: boolean;
   className?: string;
 }) {
+  const { t } = useTranslation("inbox");
   const Icon = typeIcon[approval.type] ?? defaultTypeIcon;
   const label = approvalLabel(approval.type, approval.payload as Record<string, unknown> | null);
   const showResolutionButtons =
@@ -564,7 +569,7 @@ function ApprovalInboxRow({
                   "inline-flex h-4 w-4 items-center justify-center rounded-full transition-colors",
                   "hover:bg-blue-500/20",
                 )}
-                aria-label="Mark as read"
+                aria-label={t("markAsRead")}
               >
                 <span className={cn(
                   "block h-2 w-2 rounded-full transition-opacity duration-300",
@@ -578,7 +583,7 @@ function ApprovalInboxRow({
                 onClick={onArchive}
                 disabled={archiveDisabled}
                 className="inline-flex h-4 w-4 items-center justify-center rounded-md text-muted-foreground opacity-0 transition-opacity hover:text-foreground group-hover:opacity-100 disabled:pointer-events-none disabled:opacity-30"
-                aria-label="Dismiss from inbox"
+                aria-label={t("dismissFromInbox")}
               >
                 <X className="h-3.5 w-3.5" />
               </button>
@@ -605,8 +610,8 @@ function ApprovalInboxRow({
             </span>
             <span className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
               <span className="capitalize">{approvalStatusLabel(approval.status)}</span>
-              {requesterName ? <span>requested by {requesterName}</span> : null}
-              <span>updated {timeAgo(approval.updatedAt)}</span>
+              {requesterName ? <span>{t("requestedBy", { name: requesterName })}</span> : null}
+              <span>{t("updatedTimeAgo", { time: timeAgo(approval.updatedAt) })}</span>
             </span>
           </span>
         </Link>
@@ -618,7 +623,7 @@ function ApprovalInboxRow({
               onClick={onApprove}
               disabled={isPending}
             >
-              Approve
+              {t("approve")}
             </Button>
             <Button
               variant="destructive"
@@ -627,7 +632,7 @@ function ApprovalInboxRow({
               onClick={onReject}
               disabled={isPending}
             >
-              Reject
+              {t("reject")}
             </Button>
           </div>
         ) : null}
@@ -640,7 +645,7 @@ function ApprovalInboxRow({
             onClick={onApprove}
             disabled={isPending}
           >
-            Approve
+            {t("approve")}
           </Button>
           <Button
             variant="destructive"
@@ -649,7 +654,7 @@ function ApprovalInboxRow({
             onClick={onReject}
             disabled={isPending}
           >
-            Reject
+            {t("reject")}
           </Button>
         </div>
       ) : null}
@@ -680,10 +685,13 @@ function JoinRequestInboxRow({
   selected?: boolean;
   className?: string;
 }) {
+  const { t } = useTranslation("inbox");
   const label =
     joinRequest.requestType === "human"
-      ? "Human join request"
-      : `Agent join request${joinRequest.agentName ? `: ${joinRequest.agentName}` : ""}`;
+      ? t("humanJoinRequest")
+      : joinRequest.agentName
+        ? t("agentJoinRequestNamed", { name: joinRequest.agentName })
+        : t("agentJoinRequest");
   const showUnreadSlot = unreadState !== null;
   const showUnreadDot = unreadState === "visible" || unreadState === "fading";
 
@@ -703,7 +711,7 @@ function JoinRequestInboxRow({
                   "inline-flex h-4 w-4 items-center justify-center rounded-full transition-colors",
                   "hover:bg-blue-500/20",
                 )}
-                aria-label="Mark as read"
+                aria-label={t("markAsRead")}
               >
                 <span className={cn(
                   "block h-2 w-2 rounded-full transition-opacity duration-300",
@@ -717,7 +725,7 @@ function JoinRequestInboxRow({
                 onClick={onArchive}
                 disabled={archiveDisabled}
                 className="inline-flex h-4 w-4 items-center justify-center rounded-md text-muted-foreground opacity-0 transition-opacity hover:text-foreground group-hover:opacity-100 disabled:pointer-events-none disabled:opacity-30"
-                aria-label="Dismiss from inbox"
+                aria-label={t("dismissFromInbox")}
               >
                 <X className="h-3.5 w-3.5" />
               </button>
@@ -737,8 +745,8 @@ function JoinRequestInboxRow({
               {label}
             </span>
             <span className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
-              <span>requested {timeAgo(joinRequest.createdAt)} from IP {joinRequest.requestIp}</span>
-              {joinRequest.adapterType && <span>adapter: {joinRequest.adapterType}</span>}
+              <span>{t("requestedTimeFromIp", { time: timeAgo(joinRequest.createdAt), ip: joinRequest.requestIp })}</span>
+              {joinRequest.adapterType && <span>{t("adapterType", { type: joinRequest.adapterType })}</span>}
             </span>
           </span>
         </div>
@@ -749,7 +757,7 @@ function JoinRequestInboxRow({
             onClick={onApprove}
             disabled={isPending}
           >
-            Approve
+            {t("approve")}
           </Button>
           <Button
             variant="destructive"
@@ -758,7 +766,7 @@ function JoinRequestInboxRow({
             onClick={onReject}
             disabled={isPending}
           >
-            Reject
+            {t("reject")}
           </Button>
         </div>
       </div>
@@ -769,7 +777,7 @@ function JoinRequestInboxRow({
           onClick={onApprove}
           disabled={isPending}
         >
-          Approve
+          {t("approve")}
         </Button>
         <Button
           variant="destructive"
@@ -778,7 +786,7 @@ function JoinRequestInboxRow({
           onClick={onReject}
           disabled={isPending}
         >
-          Reject
+          {t("reject")}
         </Button>
       </div>
     </div>
@@ -786,6 +794,7 @@ function JoinRequestInboxRow({
 }
 
 export function Inbox() {
+  const { t } = useTranslation("inbox");
   const { selectedCompanyId } = useCompany();
   const { setBreadcrumbs } = useBreadcrumbs();
   const navigate = useNavigate();
@@ -814,10 +823,11 @@ export function Inbox() {
   const issueLinkState = useMemo(
     () =>
       createIssueDetailLocationState(
-        "Inbox",
+        t("breadcrumb"),
         `${location.pathname}${location.search}${location.hash}`,
         "inbox",
       ),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [location.pathname, location.search, location.hash],
   );
 
@@ -847,7 +857,7 @@ export function Inbox() {
   });
 
   useEffect(() => {
-    setBreadcrumbs([{ label: "Inbox" }]);
+    setBreadcrumbs([{ label: t("breadcrumb") }]);
   }, [setBreadcrumbs]);
 
   useEffect(() => {
@@ -1523,7 +1533,7 @@ export function Inbox() {
   }, [selectedIndex]);
 
   if (!selectedCompanyId) {
-    return <EmptyState icon={InboxIcon} message="Select a company to view inbox." />;
+    return <EmptyState icon={InboxIcon} message={t("selectCompanyFirst")} />;
   }
 
   const hasRunFailures = failedRuns.length > 0;
@@ -1572,14 +1582,14 @@ export function Inbox() {
             items={[
               {
                 value: "mine",
-                label: "Mine",
+                label: t("tabMine"),
               },
               {
                 value: "recent",
-                label: "Recent",
+                label: t("tabRecent"),
               },
-              { value: "unread", label: "Unread" },
-              { value: "all", label: "All" },
+              { value: "unread", label: t("tabUnread") },
+              { value: "all", label: t("tabAll") },
             ]}
           />
         </Tabs>
@@ -1589,7 +1599,7 @@ export function Inbox() {
             <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
             <Input
               type="search"
-              placeholder="Search inbox…"
+              placeholder={t("searchPlaceholder")}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="h-8 w-[180px] pl-8 text-xs sm:w-[220px]"
@@ -1604,17 +1614,17 @@ export function Inbox() {
                 className="h-8 shrink-0 px-2 text-xs text-muted-foreground hover:text-foreground"
               >
                 <Columns3 className="mr-1 h-3.5 w-3.5" />
-                Show / hide columns
+                {t("showHideColumns")}
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-[300px] rounded-xl border-border/70 p-1.5 shadow-xl shadow-black/10">
               <DropdownMenuLabel className="px-2 pb-1 pt-1.5">
                 <div className="space-y-1">
                   <div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">
-                    Desktop issue rows
+                    {t("columnsLabel")}
                   </div>
                   <div className="text-sm font-medium text-foreground">
-                    Choose which inbox columns stay visible
+                    {t("columnsDescription")}
                   </div>
                 </div>
               </DropdownMenuLabel>
@@ -1629,10 +1639,10 @@ export function Inbox() {
                 >
                   <span className="flex flex-col gap-0.5">
                     <span className="text-sm font-medium text-foreground">
-                      {inboxIssueColumnLabels[column]}
+                      {t(inboxIssueColumnLabelKeys[column])}
                     </span>
                     <span className="text-xs leading-relaxed text-muted-foreground">
-                      {inboxIssueColumnDescriptions[column]}
+                      {t(inboxIssueColumnDescriptionKeys[column])}
                     </span>
                   </span>
                 </DropdownMenuCheckboxItem>
@@ -1642,8 +1652,8 @@ export function Inbox() {
                 onSelect={() => setIssueColumns(DEFAULT_INBOX_ISSUE_COLUMNS)}
                 className="rounded-lg px-3 py-2 text-sm"
               >
-                Reset defaults
-                <span className="ml-auto text-xs text-muted-foreground">status, id, updated</span>
+                {t("resetDefaults")}
+                <span className="ml-auto text-xs text-muted-foreground">{t("resetDefaultsHint")}</span>
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -1657,19 +1667,19 @@ export function Inbox() {
                 onClick={() => setShowMarkAllReadConfirm(true)}
                 disabled={markAllReadMutation.isPending}
               >
-                {markAllReadMutation.isPending ? "Marking…" : "Mark all as read"}
+                {markAllReadMutation.isPending ? t("markingAllAsRead") : t("markAllAsRead")}
               </Button>
               <Dialog open={showMarkAllReadConfirm} onOpenChange={setShowMarkAllReadConfirm}>
                 <DialogContent className="sm:max-w-md">
                   <DialogHeader>
-                    <DialogTitle>Mark all as read?</DialogTitle>
+                    <DialogTitle>{t("markAllAsReadTitle")}</DialogTitle>
                     <DialogDescription>
-                      This will mark {unreadIssueIds.length} unread {unreadIssueIds.length === 1 ? "item" : "items"} as read.
+                      {t("markAllAsReadDescription", { count: unreadIssueIds.length })}
                     </DialogDescription>
                   </DialogHeader>
                   <DialogFooter>
                     <Button variant="outline" onClick={() => setShowMarkAllReadConfirm(false)}>
-                      Cancel
+                      {t("common:cancel")}
                     </Button>
                     <Button
                       onClick={() => {
@@ -1677,7 +1687,7 @@ export function Inbox() {
                         markAllReadMutation.mutate(unreadIssueIds);
                       }}
                     >
-                      Mark all as read
+                      {t("markAllAsRead")}
                     </Button>
                   </DialogFooter>
                 </DialogContent>
@@ -1694,15 +1704,15 @@ export function Inbox() {
             onValueChange={(value) => setAllCategoryFilter(value as InboxCategoryFilter)}
           >
             <SelectTrigger className="h-8 w-[170px] text-xs">
-              <SelectValue placeholder="Category" />
+              <SelectValue placeholder={t("categoryAll")} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="everything">All categories</SelectItem>
-              <SelectItem value="issues_i_touched">My recent issues</SelectItem>
-              <SelectItem value="join_requests">Join requests</SelectItem>
-              <SelectItem value="approvals">Approvals</SelectItem>
-              <SelectItem value="failed_runs">Failed runs</SelectItem>
-              <SelectItem value="alerts">Alerts</SelectItem>
+              <SelectItem value="everything">{t("categoryAll")}</SelectItem>
+              <SelectItem value="issues_i_touched">{t("categoryMyIssues")}</SelectItem>
+              <SelectItem value="join_requests">{t("categoryJoinRequests")}</SelectItem>
+              <SelectItem value="approvals">{t("categoryApprovals")}</SelectItem>
+              <SelectItem value="failed_runs">{t("categoryFailedRuns")}</SelectItem>
+              <SelectItem value="alerts">{t("categoryAlerts")}</SelectItem>
             </SelectContent>
           </Select>
 
@@ -1712,12 +1722,12 @@ export function Inbox() {
               onValueChange={(value) => setAllApprovalFilter(value as InboxApprovalFilter)}
             >
               <SelectTrigger className="h-8 w-[170px] text-xs">
-                <SelectValue placeholder="Approval status" />
+                <SelectValue placeholder={t("approvalFilterAll")} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All approval statuses</SelectItem>
-                <SelectItem value="actionable">Needs action</SelectItem>
-                <SelectItem value="resolved">Resolved</SelectItem>
+                <SelectItem value="all">{t("approvalFilterAll")}</SelectItem>
+                <SelectItem value="actionable">{t("approvalFilterActionable")}</SelectItem>
+                <SelectItem value="resolved">{t("approvalFilterResolved")}</SelectItem>
               </SelectContent>
             </Select>
           )}
@@ -1736,14 +1746,14 @@ export function Inbox() {
           icon={searchQuery.trim() ? Search : InboxIcon}
           message={
             searchQuery.trim()
-              ? "No inbox items match your search."
+              ? t("emptyNoSearch")
               : tab === "mine"
-              ? "Inbox zero."
+              ? t("emptyZero")
               : tab === "unread"
-              ? "No new inbox items."
+              ? t("emptyNoNew")
               : tab === "recent"
-                ? "No recent inbox items."
-                : "No inbox items match these filters."
+                ? t("emptyNoRecent")
+                : t("emptyNoMatch")
           }
         />
       )}
@@ -1776,7 +1786,7 @@ export function Inbox() {
                     <div key="today-divider" className="flex items-center gap-3 px-4 my-2">
                       <div className="flex-1 border-t border-zinc-600" />
                       <span className="shrink-0 text-[11px] font-medium uppercase tracking-wider text-zinc-500">
-                        Earlier
+                        {t("earlier")}
                       </span>
                     </div>,
                   );
@@ -1916,7 +1926,7 @@ export function Inbox() {
                         showIdentifier={visibleIssueColumnSet.has("id") && availableIssueColumnSet.has("id")}
                       />
                     }
-                    mobileMeta={issueActivityText(issue).toLowerCase()}
+                    mobileMeta={t("updatedTime", { time: issueActivityTime(issue) }).toLowerCase()}
                     unreadState={
                       isUnread ? "visible" : isFading ? "fading" : "hidden"
                     }
@@ -1969,7 +1979,7 @@ export function Inbox() {
           {showSeparatorBefore("alerts") && <Separator />}
           <div>
             <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-              Alerts
+              {t("alerts")}
             </h3>
             <div className="divide-y divide-border border border-border">
               {showAggregateAgentError && (
@@ -1980,15 +1990,14 @@ export function Inbox() {
                   >
                     <AlertTriangle className="h-4 w-4 shrink-0 text-red-600 dark:text-red-400" />
                     <span className="text-sm">
-                      <span className="font-medium">{dashboard!.agents.error}</span>{" "}
-                      {dashboard!.agents.error === 1 ? "agent has" : "agents have"} errors
+                      {t("agentErrors", { count: dashboard!.agents.error })}
                     </span>
                   </Link>
                   <button
                     type="button"
                     onClick={() => dismiss("alert:agent-errors")}
                     className="rounded-md p-1 text-muted-foreground opacity-0 transition-opacity hover:bg-accent hover:text-foreground group-hover/alert:opacity-100"
-                    aria-label="Dismiss"
+                    aria-label={t("dismiss")}
                   >
                     <X className="h-3.5 w-3.5" />
                   </button>
@@ -2002,16 +2011,14 @@ export function Inbox() {
                   >
                     <AlertTriangle className="h-4 w-4 shrink-0 text-yellow-400" />
                     <span className="text-sm">
-                      Budget at{" "}
-                      <span className="font-medium">{dashboard!.costs.monthUtilizationPercent}%</span>{" "}
-                      utilization this month
+                      {t("budgetUtilization", { percent: dashboard!.costs.monthUtilizationPercent })}
                     </span>
                   </Link>
                   <button
                     type="button"
                     onClick={() => dismiss("alert:budget")}
                     className="rounded-md p-1 text-muted-foreground opacity-0 transition-opacity hover:bg-accent hover:text-foreground group-hover/alert:opacity-100"
-                    aria-label="Dismiss"
+                    aria-label={t("dismiss")}
                   >
                     <X className="h-3.5 w-3.5" />
                   </button>

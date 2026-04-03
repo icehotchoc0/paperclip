@@ -1,0 +1,38 @@
+{
+  "breadcrumbGoals": "목표",
+  "selectCompanyToViewGoals": "목표를 보려면 회사를 선택하세요.",
+  "noGoalsYet": "아직 목표가 없습니다.",
+  "addGoal": "목표 추가",
+  "newGoal": "새 목표",
+  "goalFallback": "목표",
+  "addDescription": "설명을 추가하세요...",
+  "subGoalsTab": "하위 목표 ({{count}})",
+  "projectsTab": "프로젝트 ({{count}})",
+  "subGoal": "하위 목표",
+  "noSubGoals": "하위 목표가 없습니다.",
+  "noLinkedProjects": "연결된 프로젝트가 없습니다.",
+  "noGoals": "목표가 없습니다.",
+
+  "levelCompany": "회사",
+  "levelTeam": "팀",
+  "levelAgent": "에이전트",
+  "levelTask": "작업",
+
+  "newSubGoalHeader": "새 하위 목표",
+  "newGoalHeader": "새 목표",
+  "goalTitle": "목표 제목",
+  "addDescriptionShort": "설명 추가...",
+  "parentGoal": "상위 목표",
+  "noParent": "상위 목표 없음",
+  "creating": "생성 중\u2026",
+  "createSubGoal": "하위 목표 만들기",
+  "createGoal": "목표 만들기",
+
+  "statusLabel": "상태",
+  "levelLabel": "수준",
+  "ownerLabel": "담당자",
+  "ownerNone": "없음",
+  "parentGoalLabel": "상위 목표",
+  "createdLabel": "생성일",
+  "updatedLabel": "수정일"
+}

@@ -1,71 +1,53 @@
 import { Link } from "@/lib/router";
+import { useTranslation } from "react-i18next";
 import { Identity } from "./Identity";
 import { timeAgo } from "../lib/timeAgo";
 import { cn } from "../lib/utils";
 import { deriveProjectUrlKey, type ActivityEvent, type Agent } from "@paperclipai/shared";
 
-const ACTION_VERBS: Record<string, string> = {
-  "issue.created": "created",
-  "issue.updated": "updated",
-  "issue.checked_out": "checked out",
-  "issue.released": "released",
-  "issue.comment_added": "commented on",
-  "issue.attachment_added": "attached file to",
-  "issue.attachment_removed": "removed attachment from",
-  "issue.document_created": "created document for",
-  "issue.document_updated": "updated document on",
-  "issue.document_deleted": "deleted document from",
-  "issue.commented": "commented on",
-  "issue.deleted": "deleted",
-  "agent.created": "created",
-  "agent.updated": "updated",
-  "agent.paused": "paused",
-  "agent.resumed": "resumed",
-  "agent.terminated": "terminated",
-  "agent.key_created": "created API key for",
-  "agent.budget_updated": "updated budget for",
-  "agent.runtime_session_reset": "reset session for",
-  "heartbeat.invoked": "invoked heartbeat for",
-  "heartbeat.cancelled": "cancelled heartbeat for",
-  "approval.created": "requested approval",
-  "approval.approved": "approved",
-  "approval.rejected": "rejected",
-  "project.created": "created",
-  "project.updated": "updated",
-  "project.deleted": "deleted",
-  "goal.created": "created",
-  "goal.updated": "updated",
-  "goal.deleted": "deleted",
-  "cost.reported": "reported cost for",
-  "cost.recorded": "recorded cost for",
-  "company.created": "created company",
-  "company.updated": "updated company",
-  "company.archived": "archived",
-  "company.budget_updated": "updated budget for",
-};
+const ACTION_VERB_KEYS = [
+  "issue.created", "issue.updated", "issue.checked_out", "issue.released",
+  "issue.comment_added", "issue.attachment_added", "issue.attachment_removed",
+  "issue.document_created", "issue.document_updated", "issue.document_deleted",
+  "issue.commented", "issue.deleted",
+  "agent.created", "agent.updated", "agent.paused", "agent.resumed",
+  "agent.terminated", "agent.key_created", "agent.budget_updated",
+  "agent.runtime_session_reset",
+  "heartbeat.invoked", "heartbeat.cancelled",
+  "approval.created", "approval.approved", "approval.rejected",
+  "project.created", "project.updated", "project.deleted",
+  "goal.created", "goal.updated", "goal.deleted",
+  "cost.reported", "cost.recorded",
+  "company.created", "company.updated", "company.archived", "company.budget_updated",
+] as const;
 
 function humanizeValue(value: unknown): string {
   if (typeof value !== "string") return String(value ?? "none");
   return value.replace(/_/g, " ");
 }
 
-function formatVerb(action: string, details?: Record<string, unknown> | null): string {
+type TFn = (key: string, opts?: Record<string, unknown>) => string;
+
+function formatVerb(t: TFn, action: string, details?: Record<string, unknown> | null): string {
   if (action === "issue.updated" && details) {
     const previous = (details._previous ?? {}) as Record<string, unknown>;
     if (details.status !== undefined) {
       const from = previous.status;
       return from
-        ? `changed status from ${humanizeValue(from)} to ${humanizeValue(details.status)} on`
-        : `changed status to ${humanizeValue(details.status)} on`;
+        ? t("changedStatusFromTo", { from: humanizeValue(from), to: humanizeValue(details.status) })
+        : t("changedStatusTo", { to: humanizeValue(details.status) });
     }
     if (details.priority !== undefined) {
       const from = previous.priority;
       return from
-        ? `changed priority from ${humanizeValue(from)} to ${humanizeValue(details.priority)} on`
-        : `changed priority to ${humanizeValue(details.priority)} on`;
+        ? t("changedPriorityFromTo", { from: humanizeValue(from), to: humanizeValue(details.priority) })
+        : t("changedPriorityTo", { to: humanizeValue(details.priority) });
     }
   }
-  return ACTION_VERBS[action] ?? action.replace(/[._]/g, " ");
+  const verbKey = `verbs.${action}`;
+  return ACTION_VERB_KEYS.includes(action as (typeof ACTION_VERB_KEYS)[number])
+    ? t(verbKey)
+    : action.replace(/[._]/g, " ");
 }
 
 function entityLink(entityType: string, entityId: string, name?: string | null): string | null {
@@ -88,7 +70,8 @@ interface ActivityRowProps {
 }
 
 export function ActivityRow({ event, agentMap, entityNameMap, entityTitleMap, className }: ActivityRowProps) {
-  const verb = formatVerb(event.action, event.details);
+  const { t } = useTranslation("activity");
+  const verb = formatVerb(t, event.action, event.details);
 
   const isHeartbeatEvent = event.entityType === "heartbeat_run";
   const heartbeatAgentId = isHeartbeatEvent
@@ -106,7 +89,7 @@ export function ActivityRow({ event, agentMap, entityNameMap, entityTitleMap, cl
     : entityLink(event.entityType, event.entityId, name);
 
   const actor = event.actorType === "agent" ? agentMap.get(event.actorId) : null;
-  const actorName = actor?.name ?? (event.actorType === "system" ? "System" : event.actorType === "user" ? "Board" : event.actorId || "Unknown");
+  const actorName = actor?.name ?? (event.actorType === "system" ? t("actorSystem") : event.actorType === "user" ? t("actorBoard") : event.actorId || t("actorUnknown"));
 
   const inner = (
     <div className="flex gap-3">

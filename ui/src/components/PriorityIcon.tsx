@@ -1,15 +1,16 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { ArrowUp, ArrowDown, Minus, AlertTriangle } from "lucide-react";
 import { cn } from "../lib/utils";
 import { priorityColor, priorityColorDefault } from "../lib/status-colors";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 
-const priorityConfig: Record<string, { icon: typeof ArrowUp; color: string; label: string }> = {
-  critical: { icon: AlertTriangle, color: priorityColor.critical ?? priorityColorDefault, label: "Critical" },
-  high: { icon: ArrowUp, color: priorityColor.high ?? priorityColorDefault, label: "High" },
-  medium: { icon: Minus, color: priorityColor.medium ?? priorityColorDefault, label: "Medium" },
-  low: { icon: ArrowDown, color: priorityColor.low ?? priorityColorDefault, label: "Low" },
+const priorityIconConfig: Record<string, { icon: typeof ArrowUp; color: string; i18nKey: string }> = {
+  critical: { icon: AlertTriangle, color: priorityColor.critical ?? priorityColorDefault, i18nKey: "critical" },
+  high: { icon: ArrowUp, color: priorityColor.high ?? priorityColorDefault, i18nKey: "high" },
+  medium: { icon: Minus, color: priorityColor.medium ?? priorityColorDefault, i18nKey: "medium" },
+  low: { icon: ArrowDown, color: priorityColor.low ?? priorityColorDefault, i18nKey: "low" },
 };
 
 const allPriorities = ["critical", "high", "medium", "low"];
@@ -22,8 +23,10 @@ interface PriorityIconProps {
 }
 
 export function PriorityIcon({ priority, onChange, className, showLabel }: PriorityIconProps) {
+  const { t } = useTranslation("common");
   const [open, setOpen] = useState(false);
-  const config = priorityConfig[priority] ?? priorityConfig.medium!;
+  const rawConfig = priorityIconConfig[priority] ?? priorityIconConfig.medium!;
+  const config = { ...rawConfig, label: t(rawConfig.i18nKey) };
   const Icon = config.icon;
 
   const icon = (
@@ -53,7 +56,8 @@ export function PriorityIcon({ priority, onChange, className, showLabel }: Prior
       <PopoverTrigger asChild>{trigger}</PopoverTrigger>
       <PopoverContent className="w-36 p-1" align="start">
         {allPriorities.map((p) => {
-          const c = priorityConfig[p]!;
+          const rc = priorityIconConfig[p]!;
+          const c = { ...rc, label: t(rc.i18nKey) };
           const PIcon = c.icon;
           return (
             <Button

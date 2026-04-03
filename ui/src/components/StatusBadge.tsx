@@ -1,7 +1,21 @@
+import { useTranslation } from "react-i18next";
 import { cn } from "../lib/utils";
 import { statusBadge, statusBadgeDefault } from "../lib/status-colors";
 
+const statusI18nKey: Record<string, string> = {
+  backlog: "backlog",
+  todo: "todo",
+  in_progress: "inProgress",
+  in_review: "inReview",
+  done: "done",
+  cancelled: "cancelled",
+  blocked: "blocked",
+};
+
 export function StatusBadge({ status }: { status: string }) {
+  const { t } = useTranslation("common");
+  const key = statusI18nKey[status];
+  const label = key ? t(key) : status.replace("_", " ");
   return (
     <span
       className={cn(
@@ -9,7 +23,7 @@ export function StatusBadge({ status }: { status: string }) {
         statusBadge[status] ?? statusBadgeDefault
       )}
     >
-      {status.replace("_", " ")}
+      {label}
     </span>
   );
 }

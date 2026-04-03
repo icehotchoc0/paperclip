@@ -1,0 +1,44 @@
+name: Deploy to EC2
+
+on:
+  workflow_run:
+    workflows: ["Docker"]
+    types: [completed]
+    branches: [master]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    timeout-minutes: 10
+    concurrency:
+      group: deploy-production
+      cancel-in-progress: false
+    steps:
+      - name: Deploy to EC2 via SSH
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            cd ~/paperclip
+
+            # Login to GitHub Container Registry
+            echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.repository_owner }} --password-stdin
+
+            # Pull latest image
+            docker pull ghcr.io/${{ github.repository }}:latest
+
+            # Write environment file
+            cat > .env <<'ENVEOF'
+            BETTER_AUTH_SECRET=${{ secrets.BETTER_AUTH_SECRET }}
+            PAPERCLIP_PUBLIC_URL=${{ secrets.PAPERCLIP_PUBLIC_URL }}
+            ENVEOF
+
+            # Restart with new image
+            docker compose -f docker-compose.production.yml down
+            docker compose -f docker-compose.production.yml up -d
+
+            # Cleanup old images
+            docker image prune -f

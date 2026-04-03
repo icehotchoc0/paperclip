@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import type { Issue } from "@paperclipai/shared";
 import { Link } from "@/lib/router";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -11,7 +12,18 @@ interface IssuesQuicklookProps {
   children: React.ReactNode;
 }
 
+const statusI18nKey: Record<string, string> = {
+  backlog: "backlog",
+  todo: "todo",
+  in_progress: "inProgress",
+  in_review: "inReview",
+  done: "done",
+  cancelled: "cancelled",
+  blocked: "blocked",
+};
+
 export function IssuesQuicklook({ issue, children }: IssuesQuicklookProps) {
+  const { t } = useTranslation("common");
   const [open, setOpen] = useState(false);
 
   return (
@@ -44,7 +56,7 @@ export function IssuesQuicklook({ issue, children }: IssuesQuicklookProps) {
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
             <span className="font-mono">{issue.identifier ?? issue.id.slice(0, 8)}</span>
             <span>·</span>
-            <span>{issue.status.replace(/_/g, " ")}</span>
+            <span>{statusI18nKey[issue.status] ? t(statusI18nKey[issue.status]) : issue.status.replace(/_/g, " ")}</span>
             <span>·</span>
             <span>{timeAgo(new Date(issue.updatedAt))}</span>
           </div>

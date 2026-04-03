@@ -9,6 +9,7 @@ import {
   useState,
   type DragEvent,
 } from "react";
+import { useTranslation } from "react-i18next";
 import { createPortal } from "react-dom";
 import {
   CodeMirrorEditor,
@@ -218,6 +219,7 @@ export const MarkdownEditor = forwardRef<MarkdownEditorRef, MarkdownEditorProps>
   mentions,
   onSubmit,
 }: MarkdownEditorProps, forwardedRef) {
+  const { t } = useTranslation("common");
   const containerRef = useRef<HTMLDivElement>(null);
   const ref = useRef<MDXEditorMethods>(null);
   const valueRef = useRef(value);
@@ -674,7 +676,7 @@ export const MarkdownEditor = forwardRef<MarkdownEditorRef, MarkdownEditorProps>
                 <span>{option.name}</span>
                 {option.kind === "project" && option.projectId && (
                   <span className="ml-auto text-[10px] uppercase tracking-wide text-muted-foreground">
-                    Project
+                    {t("project")}
                   </span>
                 )}
               </button>
@@ -690,7 +692,7 @@ export const MarkdownEditor = forwardRef<MarkdownEditorRef, MarkdownEditorProps>
             !bordered && "inset-0 rounded-sm",
           )}
         >
-          Drop image to upload
+          {t("dropImageToUpload")}
         </div>
       )}
       {uploadError && (

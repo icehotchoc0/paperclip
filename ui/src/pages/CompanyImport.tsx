@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
+import { useTranslation } from "react-i18next";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type {
   CompanyPortabilityCollisionStrategy,
@@ -644,6 +645,7 @@ async function readLocalPackageZip(file: File): Promise<{
 // ── Main page ─────────────────────────────────────────────────────────
 
 export function CompanyImport() {
+  const { t } = useTranslation("companies");
   const {
     selectedCompanyId,
     selectedCompany,
@@ -708,7 +710,7 @@ export function CompanyImport() {
   useEffect(() => {
     setBreadcrumbs([
       { label: "Org Chart", href: "/org" },
-      { label: "Import" },
+      { label: t("import.breadcrumb") },
     ]);
   }, [setBreadcrumbs]);
 
@@ -803,7 +805,7 @@ export function CompanyImport() {
     onError: (err) => {
       pushToast({
         tone: "error",
-        title: "Preview failed",
+        title: t("import.previewFailed"),
         body: err instanceof Error ? err.message : "Failed to preview import.",
       });
     },
@@ -862,7 +864,7 @@ export function CompanyImport() {
       setSelectedCompanyId(importedCompany.id);
       pushToast({
         tone: "success",
-        title: "Import complete",
+        title: t("import.importComplete"),
         body: `${result.company.name}: ${result.agents.length} agent${result.agents.length === 1 ? "" : "s"} processed.`,
       });
       // Force a fresh dashboard load so newly imported agents are immediately visible.
@@ -871,7 +873,7 @@ export function CompanyImport() {
     onError: (err) => {
       pushToast({
         tone: "error",
-        title: "Import failed",
+        title: t("import.importFailed"),
         body: err instanceof Error ? err.message : "Failed to apply import.",
       });
     },
@@ -887,7 +889,7 @@ export function CompanyImport() {
     } catch (err) {
       pushToast({
         tone: "error",
-        title: "Package read failed",
+        title: t("import.packageReadFailed"),
         body: err instanceof Error ? err.message : "Failed to read folder.",
       });
     }
@@ -1085,7 +1087,7 @@ export function CompanyImport() {
   const selectedAction = selectedFile ? (actionMap.get(selectedFile) ?? null) : null;
 
   if (!selectedCompanyId) {
-    return <EmptyState icon={Download} message="Select a company to import into." />;
+    return <EmptyState icon={Download} message={t("import.selectCompanyToImport")} />;
   }
 
   return (
@@ -1093,17 +1095,17 @@ export function CompanyImport() {
       {/* Source form section */}
       <div className="border-b border-border px-5 py-5 space-y-4">
         <div>
-          <h2 className="text-base font-semibold">Import source</h2>
+          <h2 className="text-base font-semibold">{t("import.importSource")}</h2>
           <p className="text-xs text-muted-foreground mt-1">
-            Choose a GitHub repo or upload a local Paperclip zip package.
+            {t("import.importSourceHint")}
           </p>
         </div>
 
         <div className="grid gap-2 md:grid-cols-2">
           {(
             [
-              { key: "github", icon: Github, label: "GitHub repo" },
-              { key: "local", icon: Upload, label: "Local zip" },
+              { key: "github", icon: Github, label: t("import.githubRepo") },
+              { key: "local", icon: Upload, label: t("import.localZip") },
             ] as const
           ).map(({ key, icon: Icon, label }) => (
             <button
@@ -1143,7 +1145,7 @@ export function CompanyImport() {
                 variant="outline"
                 onClick={() => packageInputRef.current?.click()}
               >
-                Choose zip
+                {t("import.chooseZip")}
               </Button>
               {localPackage && (
                 <span className="text-xs text-muted-foreground">
@@ -1177,7 +1179,7 @@ export function CompanyImport() {
           </Field>
         )}
 
-        <Field label="Target" hint="Import into this company or create a new one.">
+        <Field label={t("import.targetLabel")} hint={t("import.targetHint")}>
           <select
             className="w-full rounded-md border border-border bg-transparent px-2.5 py-1.5 text-sm outline-none"
             value={targetMode}
@@ -1186,7 +1188,7 @@ export function CompanyImport() {
               setImportPreview(null);
             }}
           >
-            <option value="new">Create new company</option>
+            <option value="new">{t("import.createNewCompany")}</option>
             <option value="existing">
               Existing company: {selectedCompany?.name}
             </option>
@@ -1220,9 +1222,9 @@ export function CompanyImport() {
               setImportPreview(null);
             }}
           >
-            <option value="rename">Rename on conflict</option>
-            <option value="skip">Skip on conflict</option>
-            <option value="replace">Replace existing</option>
+            <option value="rename">{t("import.renameOnConflict")}</option>
+            <option value="skip">{t("import.skipOnConflict")}</option>
+            <option value="replace">{t("import.replaceExisting")}</option>
           </select>
         </Field>
 
@@ -1233,7 +1235,7 @@ export function CompanyImport() {
             onClick={() => previewMutation.mutate()}
             disabled={previewMutation.isPending || !hasSource}
           >
-            {previewMutation.isPending ? "Previewing..." : "Preview import"}
+            {previewMutation.isPending ? t("import.previewing") : t("import.previewImport")}
           </Button>
         </div>
       </div>
@@ -1321,7 +1323,7 @@ export function CompanyImport() {
           <div className="grid h-[calc(100vh-16rem)] gap-0 xl:grid-cols-[19rem_minmax(0,1fr)]">
             <aside className="flex flex-col border-r border-border overflow-hidden">
               <div className="border-b border-border px-4 py-3 shrink-0">
-                <h2 className="text-base font-semibold">Package files</h2>
+                <h2 className="text-base font-semibold">{t("import.packageFiles")}</h2>
               </div>
               <div className="flex-1 overflow-y-auto">
                 <PackageFileTree

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Link, useLocation, useNavigate, useParams } from "@/lib/router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -62,18 +63,18 @@ const catchUpPolicies = ["skip_missed", "enqueue_missed_with_cap"];
 const triggerKinds = ["schedule", "webhook"];
 const signingModes = ["bearer", "hmac_sha256"];
 const routineTabs = ["triggers", "runs", "activity"] as const;
-const concurrencyPolicyDescriptions: Record<string, string> = {
-  coalesce_if_active: "Keep one follow-up run queued while an active run is still working.",
-  always_enqueue: "Queue every trigger occurrence, even if several runs stack up.",
-  skip_if_active: "Drop overlapping trigger occurrences while the routine is already active.",
+const concurrencyPolicyKeys: Record<string, string> = {
+  coalesce_if_active: "concurrencyCoalesceIfActiveDetail",
+  always_enqueue: "concurrencyAlwaysEnqueueDetail",
+  skip_if_active: "concurrencySkipIfActiveDetail",
 };
-const catchUpPolicyDescriptions: Record<string, string> = {
-  skip_missed: "Ignore schedule windows that were missed while the routine or scheduler was paused.",
-  enqueue_missed_with_cap: "Catch up missed schedule windows in capped batches after recovery.",
+const catchUpPolicyKeys: Record<string, string> = {
+  skip_missed: "catchUpSkipMissedDetail",
+  enqueue_missed_with_cap: "catchUpEnqueueMissedWithCapDetail",
 };
-const signingModeDescriptions: Record<string, string> = {
-  bearer: "Expect a shared bearer token in the Authorization header.",
-  hmac_sha256: "Expect an HMAC SHA-256 signature over the request using the shared secret.",
+const signingModeKeys: Record<string, string> = {
+  bearer: "signingModeBearer",
+  hmac_sha256: "signingModeHmac",
 };
 
 type RoutineTab = (typeof routineTabs)[number];
@@ -130,6 +131,7 @@ function TriggerEditor({
   onRotate: (id: string) => void;
   onDelete: (id: string) => void;
 }) {
+  const { t } = useTranslation("routines");
   const [draft, setDraft] = useState({
     label: trigger.label ?? "",
     cronExpression: trigger.cronExpression ?? "",
@@ -155,16 +157,16 @@ function TriggerEditor({
         </div>
         <span className="text-xs text-muted-foreground">
           {trigger.kind === "schedule" && trigger.nextRunAt
-            ? `Next: ${new Date(trigger.nextRunAt).toLocaleString()}`
+            ? t("nextRun", { date: new Date(trigger.nextRunAt).toLocaleString() })
             : trigger.kind === "webhook"
-              ? "Webhook"
-              : "API"}
+              ? t("webhook")
+              : t("api")}
         </span>
       </div>
 
       <div className="grid gap-3 md:grid-cols-2">
         <div className="space-y-1.5">
-          <Label className="text-xs">Label</Label>
+          <Label className="text-xs">{t("label")}</Label>
           <Input
             value={draft.label}
             onChange={(event) => setDraft((current) => ({ ...current, label: event.target.value }))}
@@ -172,7 +174,7 @@ function TriggerEditor({
         </div>
         {trigger.kind === "schedule" && (
           <div className="md:col-span-2 space-y-1.5">
-            <Label className="text-xs">Schedule</Label>
+            <Label className="text-xs">{t("schedule")}</Label>
             <ScheduleEditor
               value={draft.cronExpression}
               onChange={(cronExpression) => setDraft((current) => ({ ...current, cronExpression }))}
@@ -182,7 +184,7 @@ function TriggerEditor({
         {trigger.kind === "webhook" && (
           <>
             <div className="space-y-1.5">
-              <Label className="text-xs">Signing mode</Label>
+              <Label className="text-xs">{t("signingMode")}</Label>
               <Select
                 value={draft.signingMode}
                 onValueChange={(signingMode) => setDraft((current) => ({ ...current, signingMode }))}
@@ -198,7 +200,7 @@ function TriggerEditor({
               </Select>
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs">Replay window (seconds)</Label>
+              <Label className="text-xs">{t("replayWindowSeconds")}</Label>
               <Input
                 value={draft.replayWindowSec}
                 onChange={(event) => setDraft((current) => ({ ...current, replayWindowSec: event.target.value }))}
@@ -209,12 +211,12 @@ function TriggerEditor({
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
-        {trigger.lastResult && <span className="text-xs text-muted-foreground">Last: {trigger.lastResult}</span>}
+        {trigger.lastResult && <span className="text-xs text-muted-foreground">{t("last", { result: trigger.lastResult })}</span>}
         <div className="ml-auto flex items-center gap-2">
           {trigger.kind === "webhook" && (
             <Button variant="outline" size="sm" onClick={() => onRotate(trigger.id)}>
               <RefreshCw className="mr-1.5 h-3.5 w-3.5" />
-              Rotate secret
+              {t("rotateSecret")}
             </Button>
           )}
           <Button
@@ -223,7 +225,7 @@ function TriggerEditor({
             onClick={() => onSave(trigger.id, buildRoutineTriggerPatch(trigger, draft, getLocalTimezone()))}
           >
             <Save className="mr-1.5 h-3.5 w-3.5" />
-            Save trigger
+            {t("saveTrigger")}
           </Button>
           <Button
             variant="ghost"
@@ -240,6 +242,7 @@ function TriggerEditor({
 }
 
 export function RoutineDetail() {
+  const { t } = useTranslation("routines");
   const { routineId } = useParams<{ routineId: string }>();
   const { selectedCompanyId } = useCompany();
   const { setBreadcrumbs } = useBreadcrumbs();
@@ -365,7 +368,7 @@ export function RoutineDetail() {
 
   useEffect(() => {
     if (!routine) return;
-    setBreadcrumbs([{ label: "Routines", href: "/routines" }, { label: routine.title }]);
+    setBreadcrumbs([{ label: t("title"), href: "/routines" }, { label: routine.title }]);
     if (!routineDefaults) return;
 
     const changedRoutine = hydratedRoutineIdRef.current !== routine.id;
@@ -382,11 +385,11 @@ export function RoutineDetail() {
   const copySecretValue = async (label: string, value: string) => {
     try {
       await navigator.clipboard.writeText(value);
-      pushToast({ title: `${label} copied`, tone: "success" });
+      pushToast({ title: t("copiedToast", { label }), tone: "success" });
     } catch (error) {
       pushToast({
-        title: `Failed to copy ${label.toLowerCase()}`,
-        body: error instanceof Error ? error.message : "Clipboard access was denied.",
+        title: t("failedToCopy", { label: label.toLowerCase() }),
+        body: error instanceof Error ? error.message : t("clipboardDenied"),
         tone: "error",
       });
     }
@@ -426,8 +429,8 @@ export function RoutineDetail() {
     },
     onError: (error) => {
       pushToast({
-        title: "Failed to save routine",
-        body: error instanceof Error ? error.message : "Paperclip could not save the routine.",
+        title: t("failedToSave"),
+        body: error instanceof Error ? error.message : t("failedToSaveBody"),
         tone: "error",
       });
     },
@@ -446,7 +449,7 @@ export function RoutineDetail() {
           : {}),
       }),
     onSuccess: async () => {
-      pushToast({ title: "Routine run started", tone: "success" });
+      pushToast({ title: t("routineRunStarted"), tone: "success" });
       setRunVariablesOpen(false);
       setActiveTab("runs");
       await Promise.all([
@@ -458,8 +461,8 @@ export function RoutineDetail() {
     },
     onError: (error) => {
       pushToast({
-        title: "Routine run failed",
-        body: error instanceof Error ? error.message : "Paperclip could not start the routine run.",
+        title: t("routineRunFailed"),
+        body: error instanceof Error ? error.message : t("routineRunFailedBody"),
         tone: "error",
       });
     },
@@ -469,8 +472,8 @@ export function RoutineDetail() {
     mutationFn: (status: string) => routinesApi.update(routineId!, { status }),
     onSuccess: async (_data, status) => {
       pushToast({
-        title: "Routine saved",
-        body: status === "paused" ? "Automation paused." : "Automation enabled.",
+        title: t("routineSaved"),
+        body: status === "paused" ? t("automationPaused") : t("automationEnabled"),
         tone: "success",
       });
       await Promise.all([
@@ -480,8 +483,8 @@ export function RoutineDetail() {
     },
     onError: (error) => {
       pushToast({
-        title: "Failed to update routine",
-        body: error instanceof Error ? error.message : "Paperclip could not update the routine.",
+        title: t("failedToUpdate"),
+        body: error instanceof Error ? error.message : t("failedToUpdateBody"),
         tone: "error",
       });
     },
@@ -508,14 +511,14 @@ export function RoutineDetail() {
     onSuccess: async (result) => {
       if (result.secretMaterial) {
         setSecretMessage({
-          title: "Webhook trigger created",
+          title: t("webhookTriggerCreated"),
           webhookUrl: result.secretMaterial.webhookUrl,
           webhookSecret: result.secretMaterial.webhookSecret,
         });
       } else {
         pushToast({
-          title: "Trigger added",
-          body: "The routine schedule was saved.",
+          title: t("triggerAdded"),
+          body: t("triggerAddedBody"),
           tone: "success",
         });
       }
@@ -527,8 +530,8 @@ export function RoutineDetail() {
     },
     onError: (error) => {
       pushToast({
-        title: "Failed to add trigger",
-        body: error instanceof Error ? error.message : "Paperclip could not create the trigger.",
+        title: t("failedToAddTrigger"),
+        body: error instanceof Error ? error.message : t("failedToAddTriggerBody"),
         tone: "error",
       });
     },
@@ -538,8 +541,8 @@ export function RoutineDetail() {
     mutationFn: ({ id, patch }: { id: string; patch: Record<string, unknown> }) => routinesApi.updateTrigger(id, patch),
     onSuccess: async () => {
       pushToast({
-        title: "Trigger saved",
-        body: "The routine cadence update was saved.",
+        title: t("triggerSaved"),
+        body: t("triggerSavedBody"),
         tone: "success",
       });
       await Promise.all([
@@ -550,8 +553,8 @@ export function RoutineDetail() {
     },
     onError: (error) => {
       pushToast({
-        title: "Failed to update trigger",
-        body: error instanceof Error ? error.message : "Paperclip could not update the trigger.",
+        title: t("failedToUpdateTrigger"),
+        body: error instanceof Error ? error.message : t("failedToUpdateTriggerBody"),
         tone: "error",
       });
     },
@@ -561,7 +564,7 @@ export function RoutineDetail() {
     mutationFn: (id: string) => routinesApi.deleteTrigger(id),
     onSuccess: async () => {
       pushToast({
-        title: "Trigger deleted",
+        title: t("triggerDeleted"),
         tone: "success",
       });
       await Promise.all([
@@ -572,8 +575,8 @@ export function RoutineDetail() {
     },
     onError: (error) => {
       pushToast({
-        title: "Failed to delete trigger",
-        body: error instanceof Error ? error.message : "Paperclip could not delete the trigger.",
+        title: t("failedToDeleteTrigger"),
+        body: error instanceof Error ? error.message : t("failedToDeleteTriggerBody"),
         tone: "error",
       });
     },
@@ -583,7 +586,7 @@ export function RoutineDetail() {
     mutationFn: (id: string): Promise<RotateRoutineTriggerResponse> => routinesApi.rotateTriggerSecret(id),
     onSuccess: async (result) => {
       setSecretMessage({
-        title: "Webhook secret rotated",
+        title: t("webhookSecretRotated"),
         webhookUrl: result.secretMaterial.webhookUrl,
         webhookSecret: result.secretMaterial.webhookSecret,
       });
@@ -594,8 +597,8 @@ export function RoutineDetail() {
     },
     onError: (error) => {
       pushToast({
-        title: "Failed to rotate webhook secret",
-        body: error instanceof Error ? error.message : "Paperclip could not rotate the webhook secret.",
+        title: t("failedToRotate"),
+        body: error instanceof Error ? error.message : t("failedToRotateBody"),
         tone: "error",
       });
     },
@@ -635,7 +638,7 @@ export function RoutineDetail() {
   const currentProject = editDraft.projectId ? projectById.get(editDraft.projectId) ?? null : null;
 
   if (!selectedCompanyId) {
-    return <EmptyState icon={Repeat} message="Select a company to view routines." />;
+    return <EmptyState icon={Repeat} message={t("selectCompany")} />;
   }
 
   if (isLoading) {
@@ -645,7 +648,7 @@ export function RoutineDetail() {
   if (error || !routine) {
     return (
       <p className="pt-6 text-sm text-destructive">
-        {error instanceof Error ? error.message : "Routine not found"}
+        {error instanceof Error ? error.message : t("routineNotFound")}
       </p>
     );
   }
@@ -658,7 +661,7 @@ export function RoutineDetail() {
     isolatedWorkspacesEnabled: experimentalSettings?.enableIsolatedWorkspaces === true,
   });
   const automationToggleDisabled = updateRoutineStatus.isPending || routine.status === "archived";
-  const automationLabel = routine.status === "archived" ? "Archived" : automationEnabled ? "Active" : "Paused";
+  const automationLabel = routine.status === "archived" ? t("archivedCapital") : automationEnabled ? t("active") : t("common:paused");
   const automationLabelClassName = routine.status === "archived"
     ? "text-muted-foreground"
     : automationEnabled
@@ -672,7 +675,7 @@ export function RoutineDetail() {
         <textarea
           ref={titleInputRef}
           className="flex-1 min-w-0 resize-none overflow-hidden bg-transparent text-xl font-bold outline-none placeholder:text-muted-foreground/50"
-          placeholder="Routine title"
+          placeholder={t("routineTitle")}
           rows={1}
           value={editDraft.title}
           onChange={(event) => {
@@ -715,7 +718,7 @@ export function RoutineDetail() {
             role="switch"
             data-slot="toggle"
             aria-checked={automationEnabled}
-            aria-label={automationEnabled ? "Pause automatic triggers" : "Enable automatic triggers"}
+            aria-label={automationEnabled ? t("pauseAutomatic") : t("enableAutomatic")}
             disabled={automationToggleDisabled}
             className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
               automationEnabled ? "bg-emerald-500" : "bg-muted"
@@ -739,21 +742,21 @@ export function RoutineDetail() {
         <div className="rounded-lg border border-blue-500/30 bg-blue-500/5 p-4 space-y-3 text-sm">
           <div>
             <p className="font-medium">{secretMessage.title}</p>
-            <p className="text-xs text-muted-foreground">Save this now. Paperclip will not show the secret value again.</p>
+            <p className="text-xs text-muted-foreground">{t("saveSecretNow")}</p>
           </div>
           <div className="space-y-2">
             <div className="flex items-center gap-2">
               <Input value={secretMessage.webhookUrl} readOnly className="flex-1" />
-              <Button variant="outline" size="sm" onClick={() => copySecretValue("Webhook URL", secretMessage.webhookUrl)}>
+              <Button variant="outline" size="sm" onClick={() => copySecretValue(t("webhookUrl"), secretMessage.webhookUrl)}>
                 <Copy className="h-3.5 w-3.5 mr-1" />
-                URL
+                {t("url")}
               </Button>
             </div>
             <div className="flex items-center gap-2">
               <Input value={secretMessage.webhookSecret} readOnly className="flex-1" />
-              <Button variant="outline" size="sm" onClick={() => copySecretValue("Webhook secret", secretMessage.webhookSecret)}>
+              <Button variant="outline" size="sm" onClick={() => copySecretValue(t("webhookSecret"), secretMessage.webhookSecret)}>
                 <Copy className="h-3.5 w-3.5 mr-1" />
-                Secret
+                {t("secret")}
               </Button>
             </div>
           </div>
@@ -763,15 +766,15 @@ export function RoutineDetail() {
       {/* Assignment row */}
       <div className="overflow-x-auto overscroll-x-contain">
         <div className="inline-flex min-w-full flex-wrap items-center gap-2 text-sm text-muted-foreground sm:min-w-max sm:flex-nowrap">
-          <span>For</span>
+          <span>{t("for")}</span>
           <InlineEntitySelector
             ref={assigneeSelectorRef}
             value={editDraft.assigneeAgentId}
             options={assigneeOptions}
-            placeholder="Assignee"
-            noneLabel="No assignee"
-            searchPlaceholder="Search assignees..."
-            emptyMessage="No assignees found."
+            placeholder={t("assignee")}
+            noneLabel={t("noAssignee")}
+            searchPlaceholder={t("searchAssignees")}
+            emptyMessage={t("noAssigneesFound")}
             onChange={(assigneeAgentId) => {
               if (assigneeAgentId) trackRecentAssignee(assigneeAgentId);
               setEditDraft((current) => ({ ...current, assigneeAgentId }));
@@ -794,7 +797,7 @@ export function RoutineDetail() {
                   <span className="truncate">{option.label}</span>
                 )
               ) : (
-                <span className="text-muted-foreground">Assignee</span>
+                <span className="text-muted-foreground">{t("assignee")}</span>
               )
             }
             renderOption={(option) => {
@@ -808,15 +811,15 @@ export function RoutineDetail() {
               );
             }}
           />
-          <span>in</span>
+          <span>{t("in")}</span>
           <InlineEntitySelector
             ref={projectSelectorRef}
             value={editDraft.projectId}
             options={projectOptions}
-            placeholder="Project"
-            noneLabel="No project"
-            searchPlaceholder="Search projects..."
-            emptyMessage="No projects found."
+            placeholder={t("project")}
+            noneLabel={t("noProject")}
+            searchPlaceholder={t("searchProjects")}
+            emptyMessage={t("noProjectsFound")}
             onChange={(projectId) => setEditDraft((current) => ({ ...current, projectId }))}
             onConfirm={() => descriptionEditorRef.current?.focus()}
             renderTriggerValue={(option) =>
@@ -829,7 +832,7 @@ export function RoutineDetail() {
                   <span className="truncate">{option.label}</span>
                 </>
               ) : (
-                <span className="text-muted-foreground">Project</span>
+                <span className="text-muted-foreground">{t("project")}</span>
               )
             }
             renderOption={(option) => {
@@ -854,7 +857,7 @@ export function RoutineDetail() {
         ref={descriptionEditorRef}
         value={editDraft.description}
         onChange={(description) => setEditDraft((current) => ({ ...current, description }))}
-        placeholder="Add instructions..."
+        placeholder={t("addInstructions")}
         bordered={false}
         contentClassName="min-h-[120px] text-[15px] leading-7"
         onSubmit={() => {
@@ -873,13 +876,13 @@ export function RoutineDetail() {
       {/* Advanced delivery settings */}
       <Collapsible open={advancedOpen} onOpenChange={setAdvancedOpen}>
         <CollapsibleTrigger className="flex w-full items-center justify-between text-left">
-          <span className="text-sm font-medium">Advanced delivery settings</span>
+          <span className="text-sm font-medium">{t("advancedDeliverySettings")}</span>
           {advancedOpen ? <ChevronDown className="h-4 w-4 text-muted-foreground" /> : <ChevronRight className="h-4 w-4 text-muted-foreground" />}
         </CollapsibleTrigger>
         <CollapsibleContent className="pt-3">
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
-              <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">Concurrency</p>
+              <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">{t("concurrency")}</p>
               <Select
                 value={editDraft.concurrencyPolicy}
                 onValueChange={(concurrencyPolicy) => setEditDraft((current) => ({ ...current, concurrencyPolicy }))}
@@ -893,10 +896,10 @@ export function RoutineDetail() {
                   ))}
                 </SelectContent>
               </Select>
-              <p className="text-xs text-muted-foreground">{concurrencyPolicyDescriptions[editDraft.concurrencyPolicy]}</p>
+              <p className="text-xs text-muted-foreground">{t(concurrencyPolicyKeys[editDraft.concurrencyPolicy])}</p>
             </div>
             <div className="space-y-2">
-              <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">Catch-up</p>
+              <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">{t("catchUp")}</p>
               <Select
                 value={editDraft.catchUpPolicy}
                 onValueChange={(catchUpPolicy) => setEditDraft((current) => ({ ...current, catchUpPolicy }))}
@@ -910,7 +913,7 @@ export function RoutineDetail() {
                   ))}
                 </SelectContent>
               </Select>
-              <p className="text-xs text-muted-foreground">{catchUpPolicyDescriptions[editDraft.catchUpPolicy]}</p>
+              <p className="text-xs text-muted-foreground">{t(catchUpPolicyKeys[editDraft.catchUpPolicy])}</p>
             </div>
           </div>
         </CollapsibleContent>
@@ -919,7 +922,7 @@ export function RoutineDetail() {
       {/* Save bar */}
       <div className="flex items-center justify-between">
         {isEditDirty ? (
-          <span className="text-xs text-amber-600">Unsaved changes</span>
+          <span className="text-xs text-amber-600">{t("unsavedChanges")}</span>
         ) : (
           <span />
         )}
@@ -928,7 +931,7 @@ export function RoutineDetail() {
           disabled={saveRoutine.isPending || !editDraft.title.trim() || !editDraft.projectId || !editDraft.assigneeAgentId}
         >
           <Save className="mr-2 h-4 w-4" />
-          Save routine
+          {t("saveRoutine")}
         </Button>
       </div>
 
@@ -939,26 +942,26 @@ export function RoutineDetail() {
         <TabsList variant="line" className="w-full justify-start gap-1">
           <TabsTrigger value="triggers" className="gap-1.5">
             <Clock3 className="h-3.5 w-3.5" />
-            Triggers
+            {t("triggers")}
           </TabsTrigger>
           <TabsTrigger value="runs" className="gap-1.5">
             <Play className="h-3.5 w-3.5" />
-            Runs
+            {t("runs")}
             {hasLiveRun && <span className="h-2 w-2 rounded-full bg-blue-500 animate-pulse" />}
           </TabsTrigger>
 <TabsTrigger value="activity" className="gap-1.5">
             <ActivityIcon className="h-3.5 w-3.5" />
-            Activity
+            {t("activity")}
           </TabsTrigger>
         </TabsList>
 
         <TabsContent value="triggers" className="space-y-4">
           {/* Add trigger form */}
           <div className="rounded-lg border border-border p-4 space-y-3">
-            <p className="text-sm font-medium">Add trigger</p>
+            <p className="text-sm font-medium">{t("addTrigger")}</p>
             <div className="grid gap-3 md:grid-cols-2">
               <div className="space-y-1.5">
-                <Label className="text-xs">Kind</Label>
+                <Label className="text-xs">{t("kind")}</Label>
                 <Select value={newTrigger.kind} onValueChange={(kind) => setNewTrigger((current) => ({ ...current, kind }))}>
                   <SelectTrigger>
                     <SelectValue />
@@ -966,7 +969,7 @@ export function RoutineDetail() {
                   <SelectContent>
                     {triggerKinds.map((kind) => (
                       <SelectItem key={kind} value={kind} disabled={kind === "webhook"}>
-                        {kind}{kind === "webhook" ? " — COMING SOON" : ""}
+                        {kind}{kind === "webhook" ? ` ${t("webhookComingSoon")}` : ""}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -974,7 +977,7 @@ export function RoutineDetail() {
               </div>
               {newTrigger.kind === "schedule" && (
                 <div className="md:col-span-2 space-y-1.5">
-                  <Label className="text-xs">Schedule</Label>
+                  <Label className="text-xs">{t("schedule")}</Label>
                   <ScheduleEditor
                     value={newTrigger.cronExpression}
                     onChange={(cronExpression) => setNewTrigger((current) => ({ ...current, cronExpression }))}
@@ -984,7 +987,7 @@ export function RoutineDetail() {
               {newTrigger.kind === "webhook" && (
                 <>
                   <div className="space-y-1.5">
-                    <Label className="text-xs">Signing mode</Label>
+                    <Label className="text-xs">{t("signingMode")}</Label>
                     <Select value={newTrigger.signingMode} onValueChange={(signingMode) => setNewTrigger((current) => ({ ...current, signingMode }))}>
                       <SelectTrigger>
                         <SelectValue />
@@ -995,10 +998,10 @@ export function RoutineDetail() {
                         ))}
                       </SelectContent>
                     </Select>
-                    <p className="text-xs text-muted-foreground">{signingModeDescriptions[newTrigger.signingMode]}</p>
+                    <p className="text-xs text-muted-foreground">{t(signingModeKeys[newTrigger.signingMode])}</p>
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="text-xs">Replay window (seconds)</Label>
+                    <Label className="text-xs">{t("replayWindowSeconds")}</Label>
                     <Input value={newTrigger.replayWindowSec} onChange={(event) => setNewTrigger((current) => ({ ...current, replayWindowSec: event.target.value }))} />
                   </div>
                 </>
@@ -1006,14 +1009,14 @@ export function RoutineDetail() {
             </div>
             <div className="flex items-center justify-end">
               <Button size="sm" onClick={() => createTrigger.mutate()} disabled={createTrigger.isPending}>
-                {createTrigger.isPending ? "Adding..." : "Add trigger"}
+                {createTrigger.isPending ? t("addingTrigger") : t("addTrigger")}
               </Button>
             </div>
           </div>
 
           {/* Existing triggers */}
           {routine.triggers.length === 0 ? (
-            <p className="text-xs text-muted-foreground">No triggers configured yet.</p>
+            <p className="text-xs text-muted-foreground">{t("noTriggersYet")}</p>
           ) : (
             <div className="space-y-3">
               {routine.triggers.map((trigger) => (
@@ -1034,7 +1037,7 @@ export function RoutineDetail() {
             <LiveRunWidget issueId={activeIssueId} companyId={routine.companyId} />
           )}
           {(routineRuns ?? []).length === 0 ? (
-            <p className="text-xs text-muted-foreground">No runs yet.</p>
+            <p className="text-xs text-muted-foreground">{t("noRunsYet")}</p>
           ) : (
             <div className="border border-border rounded-lg divide-y divide-border">
               {(routineRuns ?? []).map((run) => (
@@ -1062,7 +1065,7 @@ export function RoutineDetail() {
 
         <TabsContent value="activity">
           {(activity ?? []).length === 0 ? (
-            <p className="text-xs text-muted-foreground">No activity yet.</p>
+            <p className="text-xs text-muted-foreground">{t("noActivityYet")}</p>
           ) : (
             <div className="border border-border rounded-lg divide-y divide-border">
               {(activity ?? []).map((event) => (
